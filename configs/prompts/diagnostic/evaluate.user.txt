@@ -1,0 +1,7 @@
+Hypothesis to evaluate:
+{hypothesis_json}
+
+New validation evidence collected for this hypothesis:
+{validation_evidence_json}
+
+Score the hypothesis.

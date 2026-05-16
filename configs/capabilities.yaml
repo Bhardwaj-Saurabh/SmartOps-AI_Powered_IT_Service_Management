@@ -34,6 +34,24 @@ capabilities:
     skills:
       - triage_incident
 
+  - name: root_cause_analysis
+    url: http://diagnostic-agent:8444
+    version: 0.1.0
+    skills:
+      - root_cause_analysis
+
+  - name: knowledge_search
+    url: http://knowledge-search-agent:8444
+    version: 0.1.0
+    skills:
+      - knowledge_search
+
+  - name: resolve_incident
+    url: http://resolution-workflow-orchestrator:8444
+    version: 0.1.0
+    skills:
+      - resolve_incident
+
   - name: semantic.query_rule
     url: http://sbca:8444
     version: 0.1.0

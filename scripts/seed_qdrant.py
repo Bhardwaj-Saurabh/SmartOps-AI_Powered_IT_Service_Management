@@ -92,20 +92,73 @@ _HISTORICAL: list[dict] = [
 ]
 
 
-async def main() -> None:
-    qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
-    gateway_url = os.environ.get("AI_GATEWAY_URL", "http://localhost:4000")
-    gateway_token = os.environ["GATEWAY_TOKEN"]   # client-credentials JWT; fetch separately
-    embedding_alias = os.environ.get("EMBEDDING_ALIAS", "di-embedding")
-    collection = os.environ.get("QDRANT_COLLECTION", "historical_incidents")
+_KB_ARTICLES: list[dict] = [
+    {
+        "article_id": "KB-001",
+        "title": "AnyConnect VPN session drops after firewall MTU change",
+        "category": "vpn",
+        "service": "vpn",
+        "effectiveness_score": 0.92,
+        "updated_at_days_ago": 14,
+        "text": "AnyConnect VPN sessions drop every 2 minutes after firewall patch reverts MTU. Workaround: set firewall MTU rule 8 to 1492.",
+    },
+    {
+        "article_id": "KB-002",
+        "title": "Okta SSO AADSTS50105 — user not assigned to application role",
+        "category": "okta-sso",
+        "service": "okta-sso",
+        "effectiveness_score": 0.90,
+        "updated_at_days_ago": 32,
+        "text": "AADSTS50105 means the user lacks an application role. Conditional Access SSO-Eligible group sync lapsed; re-add user.",
+    },
+    {
+        "article_id": "KB-003",
+        "title": "Salesforce SSO error following Okta upgrade",
+        "category": "salesforce",
+        "service": "salesforce",
+        "effectiveness_score": 0.78,
+        "updated_at_days_ago": 58,
+        "text": "Salesforce SSO breaks after Okta upgrade because the SAML authorization-server URI changed. Update Salesforce SSO settings.",
+    },
+    {
+        "article_id": "KB-004",
+        "title": "Conference-room wifi drops during meetings (5GHz roaming)",
+        "category": "wifi",
+        "service": "wifi",
+        "effectiveness_score": 0.84,
+        "updated_at_days_ago": 92,
+        "text": "AP firmware revisions cause 5GHz roaming failures. Downgrade affected APs to firmware 8.10.6.",
+    },
+    {
+        "article_id": "KB-005",
+        "title": "GitHub Enterprise 403s after SAML group sync delay",
+        "category": "github-enterprise",
+        "service": "github-enterprise",
+        "effectiveness_score": 0.81,
+        "updated_at_days_ago": 240,
+        "text": "GitHub Enterprise SAML group sync can delay by an hour after IdP changes. Trigger out-of-band sync.",
+    },
+    {
+        "article_id": "KB-006",
+        "title": "Print services — HP colour spooler stuck",
+        "category": "printer",
+        "service": "print-services",
+        "effectiveness_score": 0.70,
+        "updated_at_days_ago": 7,
+        "text": "Print spooler queue stops processing. Restart Print Spooler on the print server; re-add printer.",
+    },
+]
 
-    collections_spec = Path(__file__).resolve().parents[1] / "infra" / "qdrant" / "collections.yaml"
-    print(f"collections.yaml: {collections_spec}")
 
+async def _seed_collection(
+    *, name: str, items: list[dict], text_field: str, point_id_prefix: int,
+    qdrant_url: str, gateway_url: str, gateway_token: str, embedding_alias: str,
+) -> int:
+    """Embed via LiteLLM and upsert into Qdrant. Returns the count seeded."""
     async with httpx.AsyncClient(timeout=60.0) as http:
         embed_resp = await http.post(
             f"{gateway_url.rstrip('/')}/v1/embeddings",
-            json={"model": embedding_alias, "input": [item["text"] for item in _HISTORICAL]},
+            json={"model": embedding_alias, "input": [item[text_field] for item in items]},
             headers={"Authorization": f"Bearer {gateway_token}"},
         )
         embed_resp.raise_for_status()
@@ -113,19 +166,44 @@ async def main() -> None:
 
     client = AsyncQdrantClient(url=qdrant_url)
     try:
-        await client.get_collection(collection)
+        await client.get_collection(name)
     except Exception:
         await client.create_collection(
-            collection_name=collection,
+            collection_name=name,
             vectors_config=VectorParams(size=len(vectors[0]), distance=Distance.COSINE),
         )
 
     points = [
-        PointStruct(id=idx + 1, vector=vec, payload={k: v for k, v in item.items() if k != "text"})
-        for idx, (item, vec) in enumerate(zip(_HISTORICAL, vectors, strict=True))
+        PointStruct(
+            id=point_id_prefix + idx + 1,
+            vector=vec,
+            payload={k: v for k, v in item.items() if k != text_field},
+        )
+        for idx, (item, vec) in enumerate(zip(items, vectors, strict=True))
     ]
-    await client.upsert(collection_name=collection, points=points)
-    print(f"Seeded {len(points)} incidents into {collection}")
+    await client.upsert(collection_name=name, points=points)
+    return len(points)
+
+
+async def main() -> None:
+    qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
+    gateway_url = os.environ.get("AI_GATEWAY_URL", "http://localhost:4000")
+    gateway_token = os.environ["GATEWAY_TOKEN"]
+    embedding_alias = os.environ.get("EMBEDDING_ALIAS", "di-embedding")
+
+    n_inc = await _seed_collection(
+        name="historical_incidents", items=_HISTORICAL, text_field="text", point_id_prefix=0,
+        qdrant_url=qdrant_url, gateway_url=gateway_url,
+        gateway_token=gateway_token, embedding_alias=embedding_alias,
+    )
+    print(f"Seeded {n_inc} historical incidents")
+
+    n_kb = await _seed_collection(
+        name="knowledge_articles", items=_KB_ARTICLES, text_field="text", point_id_prefix=1000,
+        qdrant_url=qdrant_url, gateway_url=gateway_url,
+        gateway_token=gateway_token, embedding_alias=embedding_alias,
+    )
+    print(f"Seeded {n_kb} knowledge-base articles")
 
 
 if __name__ == "__main__":

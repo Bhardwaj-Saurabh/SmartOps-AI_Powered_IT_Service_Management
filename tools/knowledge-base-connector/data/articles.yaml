@@ -1,0 +1,65 @@
+# Synthetic knowledge-base corpus.
+# updated_at is days-ago for predictable freshness tests.
+
+articles:
+  - article_id: KB-001
+    title: "AnyConnect VPN session drops after firewall MTU change"
+    category: vpn
+    service: vpn
+    effectiveness_score: 0.92
+    updated_at_days_ago: 14
+    body: |
+      When the corporate firewall is patched, MTU rules can revert to the vendor default
+      (1500). The DTLS handshake then fragments and AnyConnect drops sessions every 2
+      minutes. Workaround: set MTU rule 8 to 1492, push to all firewall instances, reload.
+
+  - article_id: KB-002
+    title: "Okta SSO AADSTS50105 — user not assigned to application role"
+    category: okta-sso
+    service: okta-sso
+    effectiveness_score: 0.90
+    updated_at_days_ago: 32
+    body: |
+      AADSTS50105 means the user lacks an application role assignment. The most common
+      cause is a stale Conditional Access group sync. Re-add affected users to the
+      SSO-Eligible CA group; force a directory re-sync; have the user re-attempt.
+
+  - article_id: KB-003
+    title: "Salesforce SSO error following Okta upgrade"
+    category: salesforce
+    service: salesforce
+    effectiveness_score: 0.78
+    updated_at_days_ago: 58
+    body: |
+      After Okta upgrades, the SAML authorization-server URI can change. Update the
+      Salesforce SSO settings to point at the new URI; clear browser SSO cookies.
+
+  - article_id: KB-004
+    title: "Conference-room wifi drops during meetings (5GHz roaming)"
+    category: wifi
+    service: wifi
+    effectiveness_score: 0.84
+    updated_at_days_ago: 92
+    body: |
+      Some AP firmware revisions cause 5GHz roaming failures. Downgrade affected APs
+      to firmware 8.10.6; verify Cisco DNA-Center reports them as healthy.
+
+  - article_id: KB-005
+    title: "GitHub Enterprise 403s after SAML group sync delay"
+    category: github-enterprise
+    service: github-enterprise
+    effectiveness_score: 0.81
+    updated_at_days_ago: 240   # >180 days — should be flagged stale
+    body: |
+      After IdP changes, the SAML group sync to GitHub Enterprise can delay by up to
+      an hour. Trigger an out-of-band sync from Admin Center; re-test access.
+
+  - article_id: KB-006
+    title: "Print services — HP colour spooler stuck"
+    category: printer
+    service: print-services
+    effectiveness_score: 0.70
+    updated_at_days_ago: 7
+    body: |
+      When the print spooler queue stops processing, restart Print Spooler on the
+      print server; re-add the printer; clear the local print job cache.

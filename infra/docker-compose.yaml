@@ -397,6 +397,86 @@ services:
           memory: 768M
           cpus: "1.0"
 
+  log-aggregator-connector:
+    build:
+      context: ..
+      dockerfile: tools/log-aggregator-connector/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-log-aggregator-connector
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9001/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  metrics-query-tool:
+    build:
+      context: ..
+      dockerfile: tools/metrics-query-tool/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-metrics-query-tool
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9002/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  topology-walker:
+    build:
+      context: ..
+      dockerfile: tools/topology-walker/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-topology-walker
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9003/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  knowledge-base-connector:
+    build:
+      context: ..
+      dockerfile: tools/knowledge-base-connector/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-knowledge-base-connector
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9001/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  embedding-search-tool:
+    build:
+      context: ..
+      dockerfile: tools/embedding-search-tool/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-embedding-search-tool
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: knowledge_articles
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9002/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
   # ───────────────────── tactical agent #3 ─────────────────────
   priority-scorer:
     build:
@@ -514,6 +594,99 @@ services:
         limits:
           memory: 512M
           cpus: "0.5"
+
+  # ───────────────────── tactical agent #5 ─────────────────────
+  diagnostic-agent:
+    build:
+      context: ..
+      dockerfile: services/diagnostic-agent/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: diagnostic-agent
+      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/smartops
+      OIDC_CLIENT_ID: agent-diagnostic
+      OIDC_CLIENT_SECRET: ${DIAGNOSTIC_CLIENT_SECRET:-bootstrap-me}
+      OIDC_AUDIENCE: agent-diagnostic
+      AI_GATEWAY_URL: http://litellm:4000
+      SBCA_URL: http://sbca:8444
+      LOG_AGGREGATOR_URL: http://log-aggregator-connector:9001
+      METRICS_QUERY_URL: http://metrics-query-tool:9002
+      TOPOLOGY_WALKER_URL: http://topology-walker:9003
+      DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
+    depends_on:
+      keycloak: {condition: service_healthy}
+      litellm: {condition: service_healthy}
+      sbca: {condition: service_healthy}
+      log-aggregator-connector: {condition: service_healthy}
+      metrics-query-tool: {condition: service_healthy}
+      topology-walker: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8444/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 768M, cpus: "1.0"}}
+
+  # ───────────────────── tactical agent #6 ─────────────────────
+  knowledge-search-agent:
+    build:
+      context: ..
+      dockerfile: services/knowledge-search-agent/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: knowledge-search-agent
+      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/smartops
+      OIDC_CLIENT_ID: agent-knowledge-search
+      OIDC_CLIENT_SECRET: ${KNOWLEDGE_SEARCH_CLIENT_SECRET:-bootstrap-me}
+      OIDC_AUDIENCE: agent-knowledge-search
+      AI_GATEWAY_URL: http://litellm:4000
+      SBCA_URL: http://sbca:8444
+      KNOWLEDGE_BASE_URL: http://knowledge-base-connector:9001
+      EMBEDDING_SEARCH_URL: http://embedding-search-tool:9002
+      DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
+    depends_on:
+      keycloak: {condition: service_healthy}
+      litellm: {condition: service_healthy}
+      sbca: {condition: service_healthy}
+      knowledge-base-connector: {condition: service_healthy}
+      embedding-search-tool: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8444/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 768M, cpus: "1.0"}}
+
+  # ─────────────── second service-layer agent ─────────────────
+  resolution-workflow-orchestrator:
+    build:
+      context: ..
+      dockerfile: services/resolution-workflow-orchestrator/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: resolution-workflow-orchestrator
+      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/smartops
+      OIDC_CLIENT_ID: agent-resolution-orchestrator
+      OIDC_CLIENT_SECRET: ${RESOLUTION_ORCHESTRATOR_CLIENT_SECRET:-bootstrap-me}
+      OIDC_AUDIENCE: agent-resolution-orchestrator
+      SBCA_URL: http://sbca:8444
+      DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
+    ports:
+      - "8464:8444"      # dev only — orchestrator's A2A endpoint
+    depends_on:
+      keycloak: {condition: service_healthy}
+      sbca: {condition: service_healthy}
+      diagnostic-agent: {condition: service_healthy}
+      knowledge-search-agent: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8444/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 512M, cpus: "0.5"}}
 
 volumes:
   qdrant-data:

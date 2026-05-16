@@ -1,0 +1,40 @@
+# Synthetic metric snapshots per service. Each entry shows the baseline +
+# the values at incident time (T) so anomaly detection has something to find.
+
+vpn:
+  baseline:
+    cpu_pct: 22
+    memory_pct: 41
+    sessions_active: 412
+    handshake_failures_per_min: 0.4
+    p95_latency_ms: 38
+    error_rate_pct: 0.1
+  at_incident:
+    cpu_pct: 31           # mildly elevated — work being spent on retries
+    memory_pct: 44
+    sessions_active: 198
+    handshake_failures_per_min: 23.0    # 60x baseline
+    p95_latency_ms: 41
+    error_rate_pct: 17.5  # session-drop spike
+
+okta-sso:
+  baseline:
+    cpu_pct: 18
+    memory_pct: 36
+    auth_requests_per_min: 412
+    auth_success_pct: 99.4
+    p95_latency_ms: 84
+  at_incident:
+    cpu_pct: 19
+    memory_pct: 36
+    auth_requests_per_min: 487
+    auth_success_pct: 78.9   # 20% of users failing
+    p95_latency_ms: 86
+
+salesforce:
+  baseline:
+    p95_latency_ms: 220
+    error_rate_pct: 0.2
+  at_incident:
+    p95_latency_ms: 224
+    error_rate_pct: 0.3      # downstream symptoms only — root cause in okta

@@ -1,0 +1,70 @@
+name: diagnostic-agent
+version: 0.1.0
+pattern: evaluator-optimizer        # Anthropic — this is THE pattern reference
+pattern_kind: agent                 # LLM-driven iteration count → genuinely "agent" not "workflow"
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.15                 # a little headroom for hypothesis variation
+  max_tokens: 1024
+
+oidc:
+  client_id: agent-diagnostic
+  audience: agent-diagnostic
+
+a2a:
+  port: 8444
+  skills:
+    - id: root_cause_analysis
+      name: Root-cause analysis
+      description: Correlate logs + metrics + topology into a ranked diagnosis (iterative)
+
+# Diagnostic is one of the four agents the PRD exposes via MCP for standalone
+# on-call use. Agents/skills are the same; MCP is just a second transport.
+mcp:
+  enabled: true
+  port: 8443
+  tools:
+    - diagnose_service
+    - correlate_logs
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  log_aggregator:   {url: "${LOG_AGGREGATOR_URL:-http://log-aggregator-connector:9001}",        timeout_seconds: 5}
+  metrics_query:    {url: "${METRICS_QUERY_URL:-http://metrics-query-tool:9002}",                timeout_seconds: 5}
+  topology_walker:  {url: "${TOPOLOGY_WALKER_URL:-http://topology-walker:9003}",                 timeout_seconds: 5}
+
+prompts:
+  hypothesise_system_path: /app/configs/prompts/diagnostic/hypothesise.system.txt
+  hypothesise_user_path:   /app/configs/prompts/diagnostic/hypothesise.user.txt
+  evaluate_system_path:    /app/configs/prompts/diagnostic/evaluate.system.txt
+  evaluate_user_path:      /app/configs/prompts/diagnostic/evaluate.user.txt
+
+semantic_queries:
+  diagnostic_confidence: "diagnostic_confidence"
+  diagnostic_window:     "diagnostic_window"
+  known_issues:          "known_issues"
+
+audit:
+  cat_fields: [hypothesis_history, validation_evidence, evaluator_scores, llm_prompts, llm_responses]
+  pst_fields: [duration_ms, iterations_used, final_confidence, tokens_used]
+
+kpis:
+  business:
+    - diagnoses_emitted
+    - known_issue_short_circuit_count
+    - low_confidence_count
+    - iterations_p95
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - sidecar_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

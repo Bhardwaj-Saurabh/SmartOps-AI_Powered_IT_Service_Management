@@ -1,0 +1,31 @@
+# Business rules for the Diagnostic Agent (evaluator-optimizer).
+
+# Rule: diagnostic_confidence
+# Iteration loop terminates when the evaluator score crosses ``min_to_emit``
+# OR when ``max_iterations`` is reached. ``min_to_accept`` is the bar below
+# which the agent emits ``failed`` rather than a low-confidence diagnosis.
+diagnostic_confidence:
+  min_to_emit: 0.75
+  min_to_accept: 0.4
+  max_iterations: 3
+
+# Rule: diagnostic_window
+# Time window (minutes) for log + metrics queries around the reported time.
+diagnostic_window:
+  minutes_before: 15
+  minutes_after: 5
+
+# Rule: known_issues
+# Pre-canonical patterns; if a hypothesis matches one of these we short-circuit
+# to a high-confidence emit. Keyed by (service, symptom_keyword) → known cause.
+known_issues:
+  - service: vpn
+    pattern: "MTU mismatch"
+    canonical_cause: "Firewall MTU rule reverted after vendor patch"
+    workaround: "Apply firewall MTU rule 8 in ruleset, reload"
+    confidence: 0.95
+  - service: okta-sso
+    pattern: "AADSTS50105"
+    canonical_cause: "Conditional Access group membership lapsed for affected users"
+    workaround: "Re-add users to the SSO eligibility group; force re-sync"
+    confidence: 0.92

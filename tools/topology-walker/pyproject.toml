@@ -1,0 +1,18 @@
+[project]
+name = "tool-topology-walker"
+version = "0.1.0"
+description = "Walks the request path through the synthetic CMDB topology"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/topology_walker"]

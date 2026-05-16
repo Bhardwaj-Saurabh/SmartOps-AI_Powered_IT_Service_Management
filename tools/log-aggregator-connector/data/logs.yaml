@@ -1,0 +1,24 @@
+# Synthetic log corpus. Keyed by service. Each entry is a single log record
+# the Diagnostic Agent can correlate with metrics. timestamps are minute-of-day
+# relative to "incident time" (negative = before, positive = after).
+
+vpn:
+  - {t: -8, level: ERROR, source: "anyconnect-server", message: "TLS handshake failed: peer closed connection during MTU probe"}
+  - {t: -7, level: WARN,  source: "firewall",          message: "Dropped 312 packets with size > 1492 bytes on int eth0 inbound"}
+  - {t: -7, level: ERROR, source: "anyconnect-server", message: "DTLS rekey aborted after 3 retries"}
+  - {t: -6, level: ERROR, source: "anyconnect-server", message: "TLS handshake failed: peer closed connection during MTU probe"}
+  - {t: -5, level: WARN,  source: "firewall",          message: "Dropped 287 packets with size > 1492 bytes on int eth0 inbound"}
+  - {t: -4, level: ERROR, source: "anyconnect-server", message: "Session 7822 dropped — DTLS rekey aborted after 3 retries"}
+  - {t: -1, level: INFO,  source: "anyconnect-server", message: "Session 7901 established for priya.rao@example.com"}
+  - {t:  1, level: ERROR, source: "anyconnect-server", message: "Session 7901 dropped — DTLS rekey aborted after 3 retries"}
+
+okta-sso:
+  - {t: -6, level: ERROR, source: "okta-app", message: "AADSTS50105: The signed in user is not assigned to a role for the application"}
+  - {t: -5, level: ERROR, source: "okta-app", message: "AADSTS50105: The signed in user is not assigned to a role for the application"}
+  - {t: -4, level: WARN,  source: "ca-policy", message: "Conditional Access group SSO-Eligible synced 0 members in last cycle"}
+  - {t: -3, level: ERROR, source: "okta-app", message: "AADSTS50105: The signed in user is not assigned to a role for the application"}
+
+salesforce:
+  - {t: -5, level: INFO, source: "saml-bridge", message: "SAML assertion received but no group claim — user denied"}
+
+# Default empty-array for unknown services — main.py handles fallback.

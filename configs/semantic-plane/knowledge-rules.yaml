@@ -1,0 +1,16 @@
+# Business rules for the Knowledge Search Agent.
+
+# Rule: knowledge_freshness
+# Articles older than ``max_days_for_recommendation`` are flagged as
+# potentially stale; the agent still returns them but with a flag, so a
+# downstream agent (or human) can de-prioritise.
+knowledge_freshness:
+  max_days_for_recommendation: 180
+
+# Rule: knowledge_relevance
+# Minimum relevance score (vector similarity or keyword match score) for
+# an article to appear in the returned set.
+knowledge_relevance:
+  min_score: 0.55
+  vector_weight: 0.7
+  keyword_weight: 0.3

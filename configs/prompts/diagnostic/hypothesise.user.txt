@@ -1,0 +1,18 @@
+Incident
+  Service: {affected_service}
+  Window: {window_minutes_before}m before to {window_minutes_after}m after the report
+  Symptom: {symptoms_summary}
+
+Logs (JSONL):
+{logs_jsonl}
+
+Metric snapshots (JSON):
+{metrics_json}
+
+Topology (request path):
+{topology_json}
+
+Iteration: {iteration} of {max_iterations}
+{prior_evidence_block}
+
+Produce the hypothesis JSON.

@@ -36,6 +36,16 @@ End-to-end reference implementation of the **DI AI Framework** built around an I
 - `configs/semantic-plane/routing-rules.yaml` — per-area resolver-team rules, priority overrides, load-balancing cap, LLM weight
 - Triage Orchestrator extended with `compose_inputs` so Priority + Routing get multi-source composite payloads. **Adding the next tactical agent (Diagnostic in Stage 4) is one more chain entry — no agent edits.**
 
+**Stage 4a — Resolution begins: Diagnostic + Knowledge Search + second service-layer orchestrator**:
+- `services/diagnostic-agent/` — tactical agent #5; **Anthropic evaluator-optimizer** (project's first true Anthropic-strict "agent" — LLM-driven iteration count: generator + evaluator loop terminates on SBCA confidence threshold or `max_iterations`)
+- `services/knowledge-search-agent/` — tactical agent #6; Anthropic parallelization (vector + keyword in parallel, weighted merge, LLM re-rank with diagnosed root cause)
+- `services/resolution-workflow-orchestrator/` — **second service-layer agent**; introduces `input.<key>` references in `compose_inputs` and a `saga:` config stub populated in Stage 4b
+- `tools/log-aggregator-connector/` + `tools/metrics-query-tool/` + `tools/topology-walker/` — Diagnostic's sidecars (synthetic logs/metrics/topology)
+- `tools/knowledge-base-connector/` + `tools/embedding-search-tool/` — Knowledge Search's sidecars
+- `configs/semantic-plane/diagnostic-rules.yaml` — confidence thresholds + `known_issues` short-circuit table
+- `configs/semantic-plane/knowledge-rules.yaml` — freshness max-days + vector/keyword weights
+- `scripts/seed_qdrant.py` now seeds `knowledge_articles` too; `scripts/demo_resolve.sh` exercises the chain end-to-end
+
 ## Quickstart
 
 ```bash

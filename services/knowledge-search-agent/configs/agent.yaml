@@ -1,0 +1,71 @@
+name: knowledge-search-agent
+version: 0.1.0
+pattern: parallelization              # KB-connector + embedding-search run concurrently
+pattern_kind: workflow
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.05
+  max_tokens: 512
+
+embedding:
+  alias: di-embedding
+  vector_size: 3072
+
+oidc:
+  client_id: agent-knowledge-search
+  audience: agent-knowledge-search
+
+a2a:
+  port: 8444
+  skills:
+    - id: knowledge_search
+      name: Knowledge search
+      description: Find KB articles relevant to an incident (vector + keyword fusion, LLM re-rank)
+
+# PRD: Knowledge Search is one of the four agents the project exposes via MCP
+# for standalone use (engineers browsing solutions outside an incident).
+mcp:
+  enabled: true
+  port: 8443
+  tools:
+    - search_knowledge
+    - find_similar_incidents
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  knowledge_base:    {url: "${KNOWLEDGE_BASE_URL:-http://knowledge-base-connector:9001}",  timeout_seconds: 5}
+  embedding_search:  {url: "${EMBEDDING_SEARCH_URL:-http://embedding-search-tool:9002}",    timeout_seconds: 5}
+
+prompts:
+  rerank_system_path: /app/configs/prompts/knowledge/relevance.system.txt
+  rerank_user_path:   /app/configs/prompts/knowledge/relevance.user.txt
+
+semantic_queries:
+  knowledge_freshness: "knowledge_freshness"
+  knowledge_relevance: "knowledge_relevance"
+
+audit:
+  cat_fields: [llm_prompt, llm_response, candidate_pool, decision_chain]
+  pst_fields: [duration_ms, vector_hits, keyword_hits, stale_flagged_count, tokens_used]
+
+kpis:
+  business:
+    - searches_count
+    - articles_returned_count
+    - stale_article_count
+    - high_relevance_count
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - parallel_step_latency_ms
+    - sidecar_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

@@ -1,0 +1,10 @@
+Incident
+  Service: {affected_service}
+  Service area / category: {service_area} / {category}
+  Symptoms summary: {symptoms_summary}
+  Hypothesised root cause: {hypothesised_cause}
+
+Candidate articles (JSON):
+{candidates_json}
+
+Re-rank them.

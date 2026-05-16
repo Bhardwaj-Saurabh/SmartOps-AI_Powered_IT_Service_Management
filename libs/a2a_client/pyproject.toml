@@ -1,0 +1,22 @@
+[project]
+name = "a2a-client"
+version = "0.1.0"
+description = "Spec-native Google A2A client (no third-party wrappers)"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx>=0.27",
+  "pydantic>=2.9",
+  "di-framework-core",
+  "a2a-server",
+]
+
+[tool.uv.sources]
+di-framework-core = { workspace = true }
+a2a-server = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/a2a_client"]

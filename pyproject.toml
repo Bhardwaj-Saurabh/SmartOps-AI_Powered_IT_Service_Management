@@ -1,7 +1,32 @@
 [project]
-name = "smartops-ai-powered-it-service-management"
+name = "smartops"
 version = "0.1.0"
-description = "Add your description here"
+description = "DI AI Framework reference implementation — SmartOps (IT Service Management)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
+
+[tool.uv.workspace]
+members = ["libs/*", "services/*", "tools/*"]
+
+[tool.uv]
+dev-dependencies = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "pytest-httpx>=0.32",
+  "ruff>=0.7",
+  "mypy>=1.13",
+  "respx>=0.21",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["libs", "services", "tools"]

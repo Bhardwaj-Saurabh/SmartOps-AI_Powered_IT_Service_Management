@@ -29,6 +29,7 @@ case "${CLIENT_ID}" in
   agent-closure-orchestrator)    DEFAULT_SECRET="dev-closure-orchestrator-secret-rotate-me" ;;
   agent-resolution-documenter)   DEFAULT_SECRET="dev-resolution-documenter-secret-rotate-me" ;;
   agent-problem-linker)          DEFAULT_SECRET="dev-problem-linker-secret-rotate-me" ;;
+  agent-i2r-orchestrator)        DEFAULT_SECRET="dev-i2r-orchestrator-secret-rotate-me" ;;
   *)                             DEFAULT_SECRET="" ;;
 esac
 

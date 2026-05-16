@@ -3,6 +3,7 @@ from di_framework_core.correlation import (
     CORRELATION_ID_HEADER,
     TRACEPARENT_HEADER,
     current_correlation_id,
+    ensure_correlation_id,
     new_correlation_id,
     set_correlation_id,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "CORRELATION_ID_HEADER",
     "TRACEPARENT_HEADER",
     "current_correlation_id",
+    "ensure_correlation_id",
     "new_correlation_id",
     "set_correlation_id",
     "AgentError",

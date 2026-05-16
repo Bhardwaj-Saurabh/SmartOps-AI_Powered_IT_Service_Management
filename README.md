@@ -79,7 +79,21 @@ End-to-end reference implementation of the **DI AI Framework** built around an I
 - `configs/semantic-plane/problem-linker-rules.yaml` — recurrence threshold by service_area (`security` is more aggressive), cluster cohesion floor, eligibility allow-list.
 - Closure Orchestrator's `chain:` grows 2 → 4 entries — adding Documenter and Problem Linker is a config-only change.
 
-**The PRD's 12 tactical agents + 3 sub-process orchestrators are all on `main`.** Stage 6 will add the I2R Primary Orchestrator that composes Triage → Resolution → Closure end-to-end.
+**The PRD's 12 tactical agents + 3 sub-process orchestrators are all on `main`.**
+
+**Stage 6 — I2R Primary Orchestrator. The reference implementation is feature-complete.**:
+- `services/i2r-primary-orchestrator/` — the outermost authorising boundary. Single A2A skill `handle_incident` composes Triage → (optional escalation) → Resolution → Closure via Capability Registry lookups. EU AI Act doc inherits HIGH-RISK from Resolution.
+- Each sub-process orchestrator now emits a **flat summary artifact** (`triage_summary`, `resolution_summary`, `closure_summary`) so the primary orchestrator's `compose_inputs` can reference clean nested paths like `0.triage_summary.priority` instead of digging into the chain-step array.
+- SBCA-gated business-process decisions wired in:
+  - `i2r_escalation_criteria` — fire an early-warning Communication call between Triage and Resolution when priority/blast-radius/VIP-department matches
+  - `i2r_run_closure_on_failed_resolution` — when Resolution ends in `failed`, still run Closure so the reporter is notified + SLA + draft note are recorded
+- Triage `INPUT_REQUIRED` short-circuits the whole chain cleanly with state `triage_needs_input`.
+- `configs/semantic-plane/i2r-rules.yaml` — escalation criteria + KPI envelope (MTTR warning thresholds, STP target).
+- `configs/capabilities.yaml` — adds `handle_incident` capability.
+- `scripts/demo_i2r_full.sh` — single-call demo against the primary orchestrator (compare to `demo_full_i2r.sh` which manually chained Triage + Resolution).
+- `infra/keycloak/realm-export.json` — adds `agent-i2r-orchestrator` client with audience mappers for all three sub-orchestrators + SBCA + Communication.
+
+The PRD scope (12 tactical agents + 4 orchestrators + ~30 tool sidecars) is now complete on `main`. Remaining work (Stage 7+) is the SBCA upgrade and operational hardening.
 
 ## Quickstart
 
@@ -102,8 +116,9 @@ python scripts/seed_qdrant.py
 scripts/demo_submit_incident.sh   # straight to Incident Intake (agent #1 only)
 scripts/demo_triage.sh            # via the Triage Orchestrator → chains all 4 tactical agents
 scripts/demo_resolve.sh           # Stage 4a — Resolution Orchestrator (Diagnostic + Knowledge)
-scripts/demo_full_i2r.sh          # Stage 4b — full I2R: Triage → Resolution (8 tactical agents)
+scripts/demo_full_i2r.sh          # Stage 4b — manual Triage → Resolution (8 tactical agents)
 scripts/demo_closure.sh           # Stage 5a — Closure Orchestrator (Communication + SLA Monitor)
+scripts/demo_i2r_full.sh          # Stage 6 — single call to the I2R Primary Orchestrator (drives all 12 tactical agents)
 
 # 6. Verify the whole stack with a single PASS/FAIL run:
 scripts/smoketest.sh              # compose health + Keycloak + end-to-end triage
@@ -144,10 +159,9 @@ Inside Claude Code, run `/compliance-check` to apply the framework §12.1 verdic
 
 ## What's next
 
-- Stage 3: Triage Workflow Orchestrator + Classification Agent + Priority Scorer + Routing Agent
-- Stage 4: Resolution Workflow Orchestrator + Diagnostic / Knowledge Search / Automated Fix / Verification agents
-- Stage 5: Closure Workflow + Communication / SLA Monitor / Resolution Documenter / Problem Linker
-- Stage 6: I2R Primary Orchestrator
-- Stage 7: Full Strategic Business Context Agent (replaces the stub)
+Stages 1 – 6 are complete: 12 tactical agents, 3 sub-process orchestrators, 1 primary orchestrator, and the full sidecar fleet are on `main`.
+
+- Stage 7 — full Strategic Business Context Agent (replaces the stub: per-domain rule files, versioning, JSON-Schema validation, change auditing)
+- Stage 8 — operational hardening: real CAT/PST sinks, SBOM + provenance signing, autoscaling, chaos drills, on-call runbooks
 
 Each stage delivers standalone value per the framework's phased-adoption roadmap (§14).

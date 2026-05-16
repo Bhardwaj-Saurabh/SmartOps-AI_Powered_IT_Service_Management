@@ -96,6 +96,8 @@ check_http() {
 check_http "incident-intake /health"          "${INTAKE_URL}/health"
 check_http "triage-orchestrator /health"      "${ORCHESTRATOR_URL}/health"
 check_http "triage-orchestrator Agent Card"   "${ORCHESTRATOR_URL}/.well-known/agent-card.json"
+check_http "i2r-primary-orchestrator /health" "${I2R_URL:-http://localhost:8484}/health"
+check_http "i2r-primary-orchestrator Card"    "${I2R_URL:-http://localhost:8484}/.well-known/agent-card.json"
 check_http "qdrant readyz"                    "${QDRANT_URL}/readyz"
 check_http "keycloak realm"                   "${KEYCLOAK_REALM_URL}/.well-known/openid-configuration"
 

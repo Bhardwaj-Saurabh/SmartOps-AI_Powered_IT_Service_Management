@@ -1,0 +1,29 @@
+# Business rules for the I2R (Incident-to-Resolution) Primary Orchestrator.
+
+# Rule: i2r_escalation_criteria
+# After Triage, before Resolution, the orchestrator decides whether to fire
+# an early escalation notification. Conditions are OR'd. Sub-process
+# orchestrators handle their own internal escalations too — this is the
+# business-process-level early-warning surface.
+i2r_escalation_criteria:
+  priorities: [P1]                    # any P1 triggers
+  blast_radius_min: 8                  # large blast even at P2 triggers
+  vip_reporter_departments: [executive, board]
+
+# Rule: i2r_run_closure_on_failed_resolution
+# When Resolution ends in `failed` (e.g. fix could not be applied or
+# verification failed and Saga rolled back), should Closure still run to
+# notify the reporter + record SLA + draft an incident note?
+i2r_run_closure_on_failed_resolution:
+  default: true
+
+# Rule: i2r_kpis
+# End-to-end business KPIs the orchestrator emits. Pure metadata for now;
+# Phase 2 hooks them to enterprise dashboards.
+i2r_kpis:
+  mttr_warn_minutes_by_priority:
+    P1: 60
+    P2: 240
+    P3: 1440
+    P4: 4320
+  stp_target_pct: 70                  # straight-through-processing target

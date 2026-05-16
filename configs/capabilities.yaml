@@ -83,6 +83,12 @@ capabilities:
     skills:
       - close_incident
 
+  - name: handle_incident
+    url: http://i2r-primary-orchestrator:8444
+    version: 0.1.0
+    skills:
+      - handle_incident
+
   - name: document_resolution
     url: http://resolution-documenter-agent:8444
     version: 0.1.0

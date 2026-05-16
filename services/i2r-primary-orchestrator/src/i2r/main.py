@@ -1,4 +1,11 @@
-"""FastAPI entrypoint for the Closure Workflow Orchestrator."""
+"""FastAPI entrypoint for the I2R Primary Orchestrator.
+
+Drives the full Incident-to-Resolution business process by composing the
+three sub-process orchestrators (Triage → Resolution → Closure) via A2A
+capability discovery. This is the outermost authorising boundary of the
+autonomous actuation path (EU AI Act HIGH-RISK — inherited from the
+Resolution sub-process).
+"""
 from __future__ import annotations
 
 import logging
@@ -33,13 +40,13 @@ from observability import HealthCheck, TelemetryConfig, audit_span, init_telemet
 from oidc_client import build_default_provider
 from semantic_client import CapabilityAdvertisement, SemanticClient
 
-from closure.config import OrchestratorConfig
-from closure.workflow import ClosureRunner
+from i2r.config import OrchestratorConfig
+from i2r.workflow import I2RRunner
 
 
-_LOG = logging.getLogger("closure-workflow-orchestrator")
+_LOG = logging.getLogger("i2r-primary-orchestrator")
 _CFG_PATH = os.environ.get(
-    "AGENT_CONFIG_PATH", "/app/services/closure-workflow-orchestrator/configs/agent.yaml"
+    "AGENT_CONFIG_PATH", "/app/services/i2r-primary-orchestrator/configs/agent.yaml"
 )
 _cfg: OrchestratorConfig = load_yaml_as(_CFG_PATH, OrchestratorConfig)
 
@@ -48,65 +55,80 @@ _semantic = SemanticClient(
     base_url=os.environ.get("SBCA_URL", "http://sbca:8444"),
     bearer_provider=_token_provider,
 )
-_runner = ClosureRunner(
-    cfg=_cfg, registry_url=_cfg.capability_registry.registry_url, bearer_provider=_token_provider,
+_runner = I2RRunner(
+    cfg=_cfg,
+    registry_url=_cfg.capability_registry.registry_url,
+    bearer_provider=_token_provider,
+    semantic=_semantic,
 )
 
 
-async def close_handler(message: Message, task: Task) -> Task:
+_I2R_STATE_TO_A2A = {
+    "closed": TaskStatus.COMPLETED,
+    "resolution_completed": TaskStatus.COMPLETED,
+    "triage_needs_input": TaskStatus.INPUT_REQUIRED,
+    "resolution_failed": TaskStatus.FAILED,
+    "failed": TaskStatus.FAILED,
+    "submitted": TaskStatus.FAILED,
+    "triaged": TaskStatus.FAILED,
+    "resolving": TaskStatus.FAILED,
+}
+
+
+async def handle_incident_handler(message: Message, task: Task) -> Task:
     initial: dict[str, Any] = {}
     for part in message.parts:
         if isinstance(part, DataPart):
             initial = part.data
             break
     process_value = message.metadata.di.process or "i2r"
-    with audit_span("closure.run", audit_type=AuditType.PLATFORM,
+    with audit_span("i2r.run", audit_type=AuditType.PLATFORM,
                    attributes={"di.process": process_value}):
         result = await _runner.run(
-            process=process_value, initial_payload=initial, correlation_id=current_correlation_id(),
+            process=process_value, initial_payload=initial,
+            correlation_id=current_correlation_id(),
         )
 
     task.artifacts.append(
-        TaskArtifact(name="closure_result", parts=[DataPart(data=result)])
+        TaskArtifact(name="i2r_result", parts=[DataPart(data=result)])
     )
 
-    # Flat summary artifact — composable surface for upstream orchestrators.
-    summary: dict[str, Any] = {}
-    _artifact_map = {
-        "closure.notify":       "communications_sent",
-        "closure.sla":          "sla_status",
-        "closure.document":     "documentation",
-        "closure.problem_link": "problem_link",
+    # Flat KPI envelope — composable surface for upstream consumers/dashboards.
+    kpi_envelope: dict[str, Any] = {
+        "i2r_state": result.get("i2r_state"),
+        "duration_ms": result.get("duration_ms"),
+        "step_count": len(result.get("steps") or []),
+        "escalation_triggered": result.get("escalation_triggered", False),
+        "failed_step_index": result.get("failed_step_index"),
+        "per_step_latency_ms": [
+            {"step": s.get("step"), "duration_ms": s.get("duration_ms")}
+            for s in (result.get("steps") or [])
+        ],
     }
-    for step in result.get("steps") or []:
-        key = _artifact_map.get(step.get("step"))
-        if not key:
-            continue
-        for art in step.get("artifacts") or []:
-            if art.get("name") == key and art.get("data") is not None:
-                summary[key] = art["data"]
-                break
     task.artifacts.append(
-        TaskArtifact(name="closure_summary", parts=[DataPart(data=summary)])
+        TaskArtifact(name="i2r_kpis", parts=[DataPart(data=kpi_envelope)])
     )
 
-    state = result.get("chain_state")
-    if state == "completed":
-        task.status = TaskStatusModel(state=TaskStatus.COMPLETED, message=task.status.message)
-    else:
-        task.metadata.di.reason = f"Closure chain ended in {state}"
+    i2r_state = result.get("i2r_state") or "failed"
+    a2a_state = _I2R_STATE_TO_A2A.get(i2r_state, TaskStatus.FAILED)
+    if a2a_state == TaskStatus.FAILED:
+        task.metadata.di.reason = f"I2R chain ended in {i2r_state}"
         task.metadata.di.failed_step = result.get("failed_step_index")
-        task.status = TaskStatusModel(state=TaskStatus.FAILED, message=task.status.message)
+    task.status = TaskStatusModel(state=a2a_state, message=task.status.message)
     return task
 
 
 _card = AgentCard(
-    name="closure-workflow-orchestrator",
-    description="Strategic sub-process orchestrator for incident closure (Notify + SLA in Stage 5a)",
-    url=f"http://closure-workflow-orchestrator:{_cfg.a2a.port}",
+    name="i2r-primary-orchestrator",
+    description="Primary orchestrator for the Incident-to-Resolution business process — composes Triage, Resolution, and Closure sub-processes",
+    url=f"http://i2r-primary-orchestrator:{_cfg.a2a.port}",
     version=_cfg.version,
     capabilities=AgentCapabilities(streaming=False, pushNotifications=False),
-    skills=[AgentSkill(id=s.id, name=s.name, description=s.description, tags=["orchestrator", "closure"]) for s in _cfg.a2a.skills],
+    skills=[
+        AgentSkill(id=s.id, name=s.name, description=s.description,
+                   tags=["orchestrator", "i2r", "primary"])
+        for s in _cfg.a2a.skills
+    ],
     securitySchemes={
         "keycloak": {
             "type": "openIdConnect",
@@ -116,7 +138,7 @@ _card = AgentCard(
     security=[{"keycloak": ["agent"]}],
 )
 _handlers = HandlerRegistry.empty()
-_handlers.register("close_incident", close_handler)
+_handlers.register("handle_incident", handle_incident_handler)
 
 
 async def _probe_sbca() -> bool:
@@ -128,7 +150,7 @@ async def _probe_sbca() -> bool:
 
 
 _health = HealthCheck(
-    service="closure-workflow-orchestrator", version=_cfg.version,
+    service="i2r-primary-orchestrator", version=_cfg.version,
     probes={"sbca": _probe_sbca},
 )
 _auth = KeycloakAuth(
@@ -149,7 +171,7 @@ async def _lifespan(app: FastAPI):
         try:
             await _semantic.register(
                 CapabilityAdvertisement(
-                    name="close_incident",
+                    name="handle_incident",
                     url=str(_card.url),
                     version=_cfg.version,
                     skills=[s.id for s in _cfg.a2a.skills],
@@ -161,7 +183,7 @@ async def _lifespan(app: FastAPI):
     yield
     if _cfg.capability_registry.deregister_on_shutdown:
         try:
-            await _semantic.deregister("close_incident")
+            await _semantic.deregister("handle_incident")
         except SemanticPlaneError:
             pass
 

@@ -1140,6 +1140,35 @@ services:
     deploy:
       resources: {limits: {memory: 512M, cpus: "0.5"}}
 
+  # ─────────────── primary I2R orchestrator (outermost boundary) ──────
+  i2r-primary-orchestrator:
+    build:
+      context: ..
+      dockerfile: services/i2r-primary-orchestrator/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: i2r-primary-orchestrator
+      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/smartops
+      OIDC_CLIENT_ID: agent-i2r-orchestrator
+      OIDC_CLIENT_SECRET: ${I2R_ORCHESTRATOR_CLIENT_SECRET:-bootstrap-me}
+      OIDC_AUDIENCE: agent-i2r-orchestrator
+      SBCA_URL: http://sbca:8444
+      DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
+    ports:
+      - "8484:8444"     # dev only — primary I2R orchestrator
+    depends_on:
+      keycloak: {condition: service_started}
+      sbca: {condition: service_healthy}
+      triage-workflow-orchestrator: {condition: service_healthy}
+      resolution-workflow-orchestrator: {condition: service_healthy}
+      closure-workflow-orchestrator: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8444/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy: {resources: {limits: {memory: 512M, cpus: "0.5"}}}
+
 volumes:
   qdrant-data:
   redis-data:

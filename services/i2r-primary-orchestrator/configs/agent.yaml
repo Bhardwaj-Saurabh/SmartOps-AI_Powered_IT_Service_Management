@@ -1,0 +1,91 @@
+name: i2r-primary-orchestrator
+version: 0.1.0
+pattern: chain                       # Anthropic — deterministic 3-stage composition
+pattern_kind: workflow
+
+oidc:
+  client_id: agent-i2r-orchestrator
+  audience: agent-i2r-orchestrator
+
+a2a:
+  port: 8444
+  skills:
+    - id: handle_incident
+      name: Handle incident end-to-end
+      description: Drive the full Incident-to-Resolution business process — Triage → Resolution → Closure
+
+# The complete I2R chain. Each step targets one sub-process orchestrator
+# discovered through the Capability Registry. Output of each step is
+# referenced via the flat summary artifact each sub-orchestrator emits.
+chain:
+  - capability: triage_incident
+    skill: triage_incident
+    step_label: i2r.triage
+    forward_field: null               # uses the caller's raw payload
+
+  - capability: resolve_incident
+    skill: resolve_incident
+    step_label: i2r.resolve
+    compose_inputs:
+      incident:       "0.triage_summary.incident"
+      classification: "0.triage_summary.classification"
+      priority:       "0.triage_summary.priority"
+
+  - capability: close_incident
+    skill: close_incident
+    step_label: i2r.close
+    compose_inputs:
+      incident:           "0.triage_summary.incident"
+      classification:     "0.triage_summary.classification"
+      priority:           "0.triage_summary.priority"
+      diagnosis:          "1.resolution_summary.diagnosis"
+      fix_result:         "1.resolution_summary.fix_result"
+      verification:       "1.resolution_summary.verification"
+      trigger:            "input.trigger"             # caller picks (defaults to resolution)
+      current_state:      "input.current_state"
+      region:             "input.region"
+      started_at_epoch:   "input.started_at_epoch"
+      state_transitions:  "input.state_transitions"
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+  registry_url: "${SBCA_URL:-http://sbca:8444}"
+
+# Saga: when Triage short-circuits (e.g. Intake returns INPUT_REQUIRED for
+# missing fields), the orchestrator stops the chain at step 0 and reports
+# back. When Resolution fails AND the SBCA rule says so, Closure still runs
+# so the reporter is notified that a fix attempt failed.
+saga:
+  enabled: true
+  compensations: []                   # populated by the runner from SBCA at runtime
+  run_closure_on_failed_resolution_rule: "i2r_run_closure_on_failed_resolution"
+
+audit:
+  cat_fields: [chain_inputs, chain_outputs, escalation_triggered, saga_actions, end_to_end_decision]
+  pst_fields: [duration_ms, chain_step_count, mttr_minutes, stp_classification]
+
+kpis:
+  business:
+    - handled_incidents_count
+    - mttr_p1_p95_minutes
+    - mttr_p2_p95_minutes
+    - stp_rate                       # straight-through-processing (no human intervention)
+    - escalations_triggered_count
+  technical:
+    - i2r_total_latency_ms
+    - per_step_latency_ms
+    - downstream_a2a_error_rate
+
+resilience:
+  step_retry:   {attempts: 1, backoff: linear}
+  saga:         compensate_on_failure
+
+# Read at runtime; used by the orchestrator to decide whether to fire an
+# early-warning notification after Triage.
+escalation:
+  rule: "i2r_escalation_criteria"
+
+semantic_queries:
+  i2r_escalation_criteria:              "i2r_escalation_criteria"
+  i2r_run_closure_on_failed_resolution: "i2r_run_closure_on_failed_resolution"

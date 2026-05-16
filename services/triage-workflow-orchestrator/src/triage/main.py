@@ -89,6 +89,28 @@ async def triage_handler(message: Message, task: Task) -> Task:
         TaskArtifact(name="triage_result", parts=[DataPart(data=result)])
     )
 
+    # Flat summary artifact — first-class composable surface for upstream
+    # orchestrators (e.g. the I2R primary). Maps each chain step's primary
+    # output artifact to a top-level key in one flat dict.
+    summary: dict[str, Any] = {}
+    _artifact_map = {
+        "triage.intake":     "incident",
+        "triage.classify":   "classification",
+        "triage.prioritise": "priority",
+        "triage.route":      "routing",
+    }
+    for step in result.get("steps") or []:
+        key = _artifact_map.get(step.get("step"))
+        if not key:
+            continue
+        for art in step.get("artifacts") or []:
+            if art.get("name") == key and art.get("data") is not None:
+                summary[key] = art["data"]
+                break
+    task.artifacts.append(
+        TaskArtifact(name="triage_summary", parts=[DataPart(data=summary)])
+    )
+
     chain_state = result.get("chain_state")
     if chain_state == "completed":
         task.status = TaskStatusModel(state=TaskStatus.COMPLETED, message=task.status.message)

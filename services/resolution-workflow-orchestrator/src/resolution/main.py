@@ -76,6 +76,26 @@ async def resolve_handler(message: Message, task: Task) -> Task:
         TaskArtifact(name="resolution_result", parts=[DataPart(data=result)])
     )
 
+    # Flat summary artifact — composable surface for upstream orchestrators.
+    summary: dict[str, Any] = {}
+    _artifact_map = {
+        "resolution.diagnose":         "diagnosis",
+        "resolution.knowledge_search": "knowledge",
+        "resolution.fix":              "fix_result",
+        "resolution.verify":           "verification",
+    }
+    for step in result.get("steps") or []:
+        key = _artifact_map.get(step.get("step"))
+        if not key:
+            continue
+        for art in step.get("artifacts") or []:
+            if art.get("name") == key and art.get("data") is not None:
+                summary[key] = art["data"]
+                break
+    task.artifacts.append(
+        TaskArtifact(name="resolution_summary", parts=[DataPart(data=summary)])
+    )
+
     chain_state = result.get("chain_state")
     if chain_state == "completed":
         task.status = TaskStatusModel(state=TaskStatus.COMPLETED, message=task.status.message)

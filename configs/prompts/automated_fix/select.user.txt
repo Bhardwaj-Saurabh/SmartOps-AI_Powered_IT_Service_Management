@@ -1,0 +1,17 @@
+Incident
+  Service: {affected_service}
+  Service area / category: {service_area} / {category}
+  Priority: {priority}
+  Symptoms: {symptoms_summary}
+
+Diagnosed root cause:
+  {root_cause}
+  (confidence {diagnosis_confidence})
+
+Runbook catalogue (JSON):
+{runbook_catalogue}
+
+Recommended knowledge articles (JSON):
+{knowledge_articles_json}
+
+Pick a runbook (or null).

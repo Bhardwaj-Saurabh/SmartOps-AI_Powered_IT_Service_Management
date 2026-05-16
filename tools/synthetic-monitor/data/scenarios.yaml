@@ -1,0 +1,35 @@
+# Synthetic user-scenario corpus. The replay returns a deterministic outcome
+# keyed on (scenario, after_fix). Scenarios are looked up by ID by the
+# Verification Agent; the agent picks scenarios that mirror the original
+# incident's symptoms.
+
+scenarios:
+  vpn-handshake:
+    description: "Establish AnyConnect session, hold for 5 minutes, observe rekeys"
+    pre_fix:  {passed: false, drops_observed: 4, p95_latency_ms: 41}
+    post_fix: {passed: true,  drops_observed: 0, p95_latency_ms: 38}
+
+  rekey-stability:
+    description: "Force 3 DTLS rekeys, observe session continuity"
+    pre_fix:  {passed: false, drops_observed: 3, p95_latency_ms: 45}
+    post_fix: {passed: true,  drops_observed: 0, p95_latency_ms: 39}
+
+  okta-saml-roundtrip:
+    description: "Drive a SAML SSO login for a test user, assert role assignment"
+    pre_fix:  {passed: false, error: "AADSTS50105"}
+    post_fix: {passed: true,  error: null}
+
+  salesforce-sso-roundtrip:
+    description: "Drive Salesforce SSO login, assert dashboard loads"
+    pre_fix:  {passed: false, error: "redirect_loop"}
+    post_fix: {passed: true,  error: null}
+
+  print-roundtrip:
+    description: "Submit a test print job, observe completion"
+    pre_fix:  {passed: false, error: "queue_stuck"}
+    post_fix: {passed: true,  error: null}
+
+  always-fails:
+    description: "Scenario that fails regardless of fix — used by demo-unfixed for testing the rollback path"
+    pre_fix:  {passed: false, error: "synthetic-always-fail"}
+    post_fix: {passed: false, error: "synthetic-always-fail"}

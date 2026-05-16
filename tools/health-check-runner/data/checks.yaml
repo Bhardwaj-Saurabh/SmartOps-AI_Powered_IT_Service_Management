@@ -1,0 +1,37 @@
+# Synthetic health-check definitions. Each service has a list of "probes"
+# the runner pretends to execute. ``healthy_after_fix`` controls the result
+# when the caller passes ``after_fix=true`` (i.e. the verification phase) —
+# this lets us simulate both passing AND failing verification deterministically.
+
+services:
+  vpn:
+    probes:
+      - {name: "anyconnect-listening",  kind: "tcp",  target: "vpn-gateway:443"}
+      - {name: "session-establish",     kind: "synthetic", scenario: "vpn-handshake"}
+      - {name: "dtls-rekey-stable",     kind: "synthetic", scenario: "rekey-stability"}
+    healthy_after_fix: true
+
+  okta-sso:
+    probes:
+      - {name: "okta-app-reachable",    kind: "http", target: "https://okta.example/healthz"}
+      - {name: "saml-assertion-issue",  kind: "synthetic", scenario: "okta-saml-roundtrip"}
+    healthy_after_fix: true
+
+  salesforce:
+    probes:
+      - {name: "salesforce-reachable",  kind: "http", target: "https://salesforce.example/healthz"}
+      - {name: "sso-login",             kind: "synthetic", scenario: "salesforce-sso-roundtrip"}
+    healthy_after_fix: true
+
+  print-services:
+    probes:
+      - {name: "spooler-running",       kind: "tcp", target: "print-server:9100"}
+      - {name: "test-print-page",       kind: "synthetic", scenario: "print-roundtrip"}
+    healthy_after_fix: true
+
+  # An UNFIXED service for testing the rollback path end-to-end. Caller can
+  # pass affected_service=demo-unfixed to force a verification failure.
+  demo-unfixed:
+    probes:
+      - {name: "broken-probe", kind: "synthetic", scenario: "always-fails"}
+    healthy_after_fix: false

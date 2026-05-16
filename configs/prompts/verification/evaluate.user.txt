@@ -1,0 +1,18 @@
+Original incident
+  Service: {affected_service}
+  Symptoms: {symptoms_summary}
+
+Fix that was applied
+  Runbook: {runbook_id}
+  Summary: {fix_summary}
+
+Health-check results (JSON):
+{health_checks_json}
+
+Synthetic-monitor replay (JSON):
+{synthetic_results_json}
+
+Pre/post metric comparison (JSON):
+{comparison_json}
+
+Judge whether the fix worked.

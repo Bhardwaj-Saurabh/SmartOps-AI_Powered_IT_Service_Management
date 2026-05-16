@@ -41,12 +41,40 @@ class CapabilityRegistryCfg(BaseModel):
     registry_url: str
 
 
-class SagaCompensation(BaseModel):
-    """Stage 4a stub. Stage 4b populates this with per-step rollback hooks
-    keyed on which downstream step's failure triggers the compensation."""
-    on_failure_of_step: int
+class SagaArtifactPredicate(BaseModel):
+    """Fires when a step COMPLETES and its artifact field matches the predicate.
+    This is how Verification reporting fix_verified=false triggers Automated
+    Fix rollback — Verification itself returns COMPLETED (it reports a fact),
+    so we need an artifact-content trigger rather than a state trigger."""
+    step_index: int
+    artifact: str
+    field: str
+    equals: bool | str | int | float | None = None
+
+
+class SagaStepFailure(BaseModel):
+    """Fires when the named step ends in failed / rejected / canceled."""
+    step_index: int
+
+
+class SagaTrigger(BaseModel):
+    on_step_failure: SagaStepFailure | None = None
+    on_artifact_predicate: SagaArtifactPredicate | None = None
+
+
+class SagaAction(BaseModel):
     capability: str
     skill: str
+    params_from_artifact: dict[str, str] = Field(default_factory=dict)
+    """Map: param_key → ``<step_idx>.<artifact_name>.<field_path>`` (dot
+    notation into the artifact's .data). Resolved at runtime from chain
+    outputs."""
+    reason: str = ""
+
+
+class SagaCompensation(BaseModel):
+    trigger: SagaTrigger
+    action: SagaAction
 
 
 class SagaCfg(BaseModel):

@@ -664,6 +664,169 @@ services:
     deploy:
       resources: {limits: {memory: 768M, cpus: "1.0"}}
 
+  # ───────────────────── Stage 4b sidecars ─────────────────────
+  script-executor:
+    build:
+      context: ..
+      dockerfile: tools/script-executor/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-script-executor
+      SIMULATE_RUNBOOK_FAILURE_AT_STEP: "${SIMULATE_RUNBOOK_FAILURE_AT_STEP:--1}"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9001/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  configuration-manager:
+    build:
+      context: ..
+      dockerfile: tools/configuration-manager/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-configuration-manager
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9002/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  rollback-handler:
+    build:
+      context: ..
+      dockerfile: tools/rollback-handler/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-rollback-handler
+      CONFIGURATION_MANAGER_URL: http://configuration-manager:9002
+    depends_on:
+      configuration-manager: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9003/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  health-check-runner:
+    build:
+      context: ..
+      dockerfile: tools/health-check-runner/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-health-check-runner
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9001/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  synthetic-monitor:
+    build:
+      context: ..
+      dockerfile: tools/synthetic-monitor/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-synthetic-monitor
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9002/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  comparison-tool:
+    build:
+      context: ..
+      dockerfile: tools/comparison-tool/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-comparison-tool
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9003/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 256M, cpus: "0.5"}}
+
+  # ───────────────────── tactical agent #7 (HIGH-RISK) ─────────
+  automated-fix-agent:
+    build:
+      context: ..
+      dockerfile: services/automated-fix-agent/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: automated-fix-agent
+      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/smartops
+      OIDC_CLIENT_ID: agent-automated-fix
+      OIDC_CLIENT_SECRET: ${AUTOMATED_FIX_CLIENT_SECRET:-bootstrap-me}
+      OIDC_AUDIENCE: agent-automated-fix
+      AI_GATEWAY_URL: http://litellm:4000
+      SBCA_URL: http://sbca:8444
+      SCRIPT_EXECUTOR_URL: http://script-executor:9001
+      CONFIGURATION_MANAGER_URL: http://configuration-manager:9002
+      ROLLBACK_HANDLER_URL: http://rollback-handler:9003
+      DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
+    depends_on:
+      keycloak: {condition: service_started}
+      litellm: {condition: service_healthy}
+      sbca: {condition: service_healthy}
+      script-executor: {condition: service_healthy}
+      configuration-manager: {condition: service_healthy}
+      rollback-handler: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8444/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 768M, cpus: "1.0"}}
+
+  # ───────────────────── tactical agent #8 ─────────────────────
+  verification-agent:
+    build:
+      context: ..
+      dockerfile: services/verification-agent/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: verification-agent
+      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/smartops
+      OIDC_CLIENT_ID: agent-verification
+      OIDC_CLIENT_SECRET: ${VERIFICATION_CLIENT_SECRET:-bootstrap-me}
+      OIDC_AUDIENCE: agent-verification
+      AI_GATEWAY_URL: http://litellm:4000
+      SBCA_URL: http://sbca:8444
+      HEALTH_CHECK_RUNNER_URL: http://health-check-runner:9001
+      SYNTHETIC_MONITOR_URL: http://synthetic-monitor:9002
+      COMPARISON_TOOL_URL: http://comparison-tool:9003
+      METRICS_QUERY_URL: http://metrics-query-tool:9002
+      DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
+    depends_on:
+      keycloak: {condition: service_started}
+      litellm: {condition: service_healthy}
+      sbca: {condition: service_healthy}
+      health-check-runner: {condition: service_healthy}
+      synthetic-monitor: {condition: service_healthy}
+      comparison-tool: {condition: service_healthy}
+      metrics-query-tool: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8444/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources: {limits: {memory: 768M, cpus: "1.0"}}
+
   # ─────────────── second service-layer agent ─────────────────
   resolution-workflow-orchestrator:
     build:
@@ -685,6 +848,8 @@ services:
       sbca: {condition: service_healthy}
       diagnostic-agent: {condition: service_healthy}
       knowledge-search-agent: {condition: service_healthy}
+      automated-fix-agent: {condition: service_healthy}
+      verification-agent: {condition: service_healthy}
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8444/health', timeout=2).status==200 else 1)\""]
       interval: 10s

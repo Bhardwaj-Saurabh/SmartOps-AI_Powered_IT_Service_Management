@@ -1,0 +1,6 @@
+Runbook executed: {runbook_id}
+Outcome: {outcome}      (succeeded | rolled_back | partial)
+Step log (JSON):
+{step_log_json}
+
+Summarise.

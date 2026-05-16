@@ -46,9 +46,22 @@ capabilities:
     skills:
       - knowledge_search
 
+  - name: automated_fix
+    url: http://automated-fix-agent:8444
+    version: 0.1.0
+    skills:
+      - apply_automated_fix
+      - rollback
+
+  - name: verify_resolution
+    url: http://verification-agent:8444
+    version: 0.1.0
+    skills:
+      - verify_resolution
+
   - name: resolve_incident
     url: http://resolution-workflow-orchestrator:8444
-    version: 0.1.0
+    version: 0.2.0
     skills:
       - resolve_incident
 

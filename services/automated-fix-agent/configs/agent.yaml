@@ -1,0 +1,76 @@
+name: automated-fix-agent
+version: 0.1.0
+pattern: chain                       # Anthropic — deterministic chain with explicit gates
+pattern_kind: workflow
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.05
+  max_tokens: 768
+
+oidc:
+  client_id: agent-automated-fix
+  audience: agent-automated-fix
+
+a2a:
+  port: 8444
+  skills:
+    - id: apply_automated_fix
+      name: Apply an automated fix
+      description: Select + execute a remediation runbook with full snapshot and rollback. SBCA-gated.
+    - id: rollback
+      name: Roll back a prior fix
+      description: Restore the configuration snapshot referenced by a prior fix's rollback_token
+
+# Per PRD: NOT exposed via MCP. Auto-fix only runs inside an orchestrated
+# safety context — never as a standalone tool. This is itself an Annex III
+# control.
+mcp:
+  enabled: false
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  script_executor:        {url: "${SCRIPT_EXECUTOR_URL:-http://script-executor:9001}",                timeout_seconds: 30}
+  configuration_manager:  {url: "${CONFIGURATION_MANAGER_URL:-http://configuration-manager:9002}",    timeout_seconds: 5}
+  rollback_handler:       {url: "${ROLLBACK_HANDLER_URL:-http://rollback-handler:9003}",              timeout_seconds: 10}
+
+prompts:
+  select_system_path:  /app/configs/prompts/automated_fix/select.system.txt
+  select_user_path:    /app/configs/prompts/automated_fix/select.user.txt
+  summary_system_path: /app/configs/prompts/automated_fix/summary.system.txt
+  summary_user_path:   /app/configs/prompts/automated_fix/summary.user.txt
+
+semantic_queries:
+  automated_fix_approval: "automated_fix_approval"
+  automated_fix_scope:    "automated_fix_scope"
+  change_freeze:          "change_freeze"
+  rollback_required:      "rollback_required"
+
+audit:
+  cat_fields: [llm_prompt, llm_response, runbook_selection, runbook_parameters,
+               snapshot_id, step_log, rollback_invocation, summary_llm_response]
+  pst_fields: [duration_ms, runbook_id, outcome, rollback_triggered_count,
+               approval_denied_count, scope_denied_count, change_freeze_denied_count]
+
+kpis:
+  business:
+    - fixes_applied_count
+    - rollbacks_triggered_count
+    - approval_denied_count
+    - scope_denied_count
+    - change_freeze_denied_count
+    - per_fix_type_success_rate
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - sidecar_latency_ms
+    - error_rate
+    - rollback_latency_ms
+
+resilience:
+  tool_retry:   {attempts: 2, backoff: exponential}   # conservative — actuator
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

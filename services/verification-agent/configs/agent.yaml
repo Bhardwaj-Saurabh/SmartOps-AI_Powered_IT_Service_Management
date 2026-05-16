@@ -1,0 +1,62 @@
+name: verification-agent
+version: 0.1.0
+pattern: parallelization              # health + synthetic + metrics queried concurrently
+pattern_kind: workflow
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.0                    # deterministic verdicts
+  max_tokens: 512
+
+oidc:
+  client_id: agent-verification
+  audience: agent-verification
+
+a2a:
+  port: 8444
+  skills:
+    - id: verify_resolution
+      name: Verify resolution
+      description: Confirm the applied fix resolved the reported symptoms
+
+mcp:
+  enabled: false                       # always orchestrated per PRD
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  health_check_runner: {url: "${HEALTH_CHECK_RUNNER_URL:-http://health-check-runner:9001}", timeout_seconds: 5}
+  synthetic_monitor:   {url: "${SYNTHETIC_MONITOR_URL:-http://synthetic-monitor:9002}",      timeout_seconds: 8}
+  comparison_tool:     {url: "${COMPARISON_TOOL_URL:-http://comparison-tool:9003}",          timeout_seconds: 5}
+  metrics_query:       {url: "${METRICS_QUERY_URL:-http://metrics-query-tool:9002}",         timeout_seconds: 5}
+
+prompts:
+  evaluate_system_path: /app/configs/prompts/verification/evaluate.system.txt
+  evaluate_user_path:   /app/configs/prompts/verification/evaluate.user.txt
+
+semantic_queries:
+  verification_soak_period: "verification_soak_period"
+  verification_thresholds:  "verification_thresholds"
+  verification_confidence:  "verification_confidence"
+
+audit:
+  cat_fields: [llm_prompt, llm_response, evidence_pack, decision_chain]
+  pst_fields: [duration_ms, fix_verified, health_passed, synthetic_passed, comparison_improved]
+
+kpis:
+  business:
+    - verifications_count
+    - fix_verified_rate
+    - rollback_triggers_caused_count
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - parallel_step_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

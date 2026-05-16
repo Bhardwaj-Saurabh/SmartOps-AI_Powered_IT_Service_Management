@@ -1,0 +1,56 @@
+# Synthetic runbook catalogue. Production would mount these from a versioned
+# runbook repo. Phase 1: each runbook is a list of "simulated" steps with a
+# canned outcome — the executor pretends to do them and returns a structured log.
+
+runbooks:
+  - id: okta-ca-resync
+    title: "Re-sync Okta Conditional Access SSO-Eligible group"
+    fix_type: okta-ca-resync
+    applicable_to: ["AADSTS50105", "okta-ca-group", "ca group sync"]
+    param_schema:
+      affected_users: {type: array, description: "Email addresses to re-add", required: true}
+    steps:
+      - {action: "lookup_users", expected_outcome: success}
+      - {action: "remove_from_eligibility_group", expected_outcome: success}
+      - {action: "add_to_eligibility_group",      expected_outcome: success}
+      - {action: "force_sync",                     expected_outcome: success}
+    estimated_duration_seconds: 30
+
+  - id: vpn-mtu-fix
+    title: "Reset firewall MTU rule to 1492 after vendor patch"
+    fix_type: vpn-mtu-fix
+    applicable_to: ["MTU mismatch", "AnyConnect drops", "firewall MTU"]
+    param_schema:
+      firewall_ip: {type: string, description: "Management IP of the affected firewall", required: true}
+    steps:
+      - {action: "ssh_to_firewall",       expected_outcome: success}
+      - {action: "apply_mtu_rule_1492",   expected_outcome: success}
+      - {action: "reload_ruleset",        expected_outcome: success}
+    estimated_duration_seconds: 60
+
+  - id: salesforce-sso-uri-update
+    title: "Update Salesforce SAML authorization-server URI"
+    fix_type: salesforce-sso-uri-update
+    applicable_to: ["okta upgrade", "Salesforce SSO"]
+    param_schema:
+      new_uri: {type: string, required: true}
+    steps:
+      - {action: "fetch_current_uri", expected_outcome: success}
+      - {action: "patch_saml_config", expected_outcome: success}
+    estimated_duration_seconds: 20
+
+  - id: printer-spooler-restart
+    title: "Restart HP print spooler service on the affected print server"
+    fix_type: printer-spooler-restart
+    applicable_to: ["spooler stuck", "print queue stuck"]
+    param_schema:
+      print_server: {type: string, required: true}
+    steps:
+      - {action: "stop_spooler",  expected_outcome: success}
+      - {action: "clear_queue",   expected_outcome: success}
+      - {action: "start_spooler", expected_outcome: success}
+    estimated_duration_seconds: 10
+
+# Failure simulator: if env var SIMULATE_RUNBOOK_FAILURE_AT_STEP is set to an
+# integer N, the executor will fail step N of any runbook. Used for testing
+# the rollback path end-to-end.

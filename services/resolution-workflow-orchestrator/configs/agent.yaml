@@ -1,6 +1,6 @@
 name: resolution-workflow-orchestrator
-version: 0.1.0
-pattern: chain                        # Anthropic; deterministic sequence of A2A calls
+version: 0.2.0                          # Stage 4b — chain extended, saga active
+pattern: chain
 pattern_kind: workflow
 
 oidc:
@@ -12,46 +12,93 @@ a2a:
   skills:
     - id: resolve_incident
       name: Resolve incident
-      description: Chain Diagnostic + Knowledge Search (Stage 4a) into a single resolution result; +Fix/Verify with Saga in Stage 4b
+      description: Diagnose → Knowledge Search → Automated Fix → Verify, with Saga rollback on verification failure
 
-# Capabilities this orchestrator chains. Stage 4b appends Automated Fix +
-# Verification entries with saga compensations.
+# Full 4-step chain. Adding Stage 5's Communication / SLA / Documenter agents
+# is a config-only change in a later stage.
 chain:
   - capability: root_cause_analysis
     skill: root_cause_analysis
     step_label: resolution.diagnose
-    forward_field: null               # uses the orchestrator's caller payload
+    forward_field: null
+
   - capability: knowledge_search
     skill: knowledge_search
     step_label: resolution.knowledge_search
     compose_inputs:
-      # "input.<key>" references the caller's original triaged-incident payload.
-      # "<step_idx>.<artifact_name>" references a prior step's artifact.
       incident:       "input.incident"
       classification: "input.classification"
       diagnosis:      "0.diagnosis"
+
+  - capability: automated_fix
+    skill: apply_automated_fix
+    step_label: resolution.fix
+    compose_inputs:
+      incident:           "input.incident"
+      classification:     "input.classification"
+      priority:           "input.priority"
+      diagnosis:          "0.diagnosis"
+      knowledge_articles: "1.knowledge"      # the Knowledge Search artifact name
+
+  - capability: verify_resolution
+    skill: verify_resolution
+    step_label: resolution.verify
+    compose_inputs:
+      incident:       "input.incident"
+      classification: "input.classification"
+      priority:       "input.priority"
+      fix_result:     "2.fix_result"
 
 capability_registry:
   register_on_startup: true
   deregister_on_shutdown: true
   registry_url: "${SBCA_URL:-http://sbca:8444}"
 
-# Saga compensation table — populated in Stage 4b when Automated Fix is
-# introduced. For Stage 4a both Diagnostic and Knowledge Search are
-# read-only so there is nothing to compensate.
+# ─── Saga compensation table (Stage 4b populated) ───────────────────────
+# trigger_on:
+#   on_step_failure     — fires when the named step ends in failed/rejected/canceled.
+#   on_artifact_predicate — fires when the named step COMPLETES but its artifact
+#                           field matches the predicate. This is how Verification
+#                           returning fix_verified=false triggers Automated Fix
+#                           rollback (Verification itself doesn't fail — it
+#                           reports a fact).
 saga:
-  enabled: false
-  compensations: []
+  enabled: true
+  compensations:
+    - trigger:
+        on_artifact_predicate:
+          step_index: 3                     # verify_resolution step
+          artifact: "verification"
+          field: "fix_verified"
+          equals: false
+      action:
+        capability: automated_fix
+        skill: rollback
+        params_from_artifact:
+          rollback_token: "2.fix_result.rollback_token"
+        reason: "Verification reports fix_verified=false"
+    # Also catch the rare case where verification itself fails outright:
+    - trigger:
+        on_step_failure:
+          step_index: 3
+      action:
+        capability: automated_fix
+        skill: rollback
+        params_from_artifact:
+          rollback_token: "2.fix_result.rollback_token"
+        reason: "Verification step failed; rolling back as a precaution"
 
 audit:
-  cat_fields: [chain_inputs, chain_outputs, failed_step_index, saga_compensations]
-  pst_fields: [duration_ms, chain_step_count, error_rate]
+  cat_fields: [chain_inputs, chain_outputs, failed_step_index, saga_compensations,
+               saga_planned, saga_executed]
+  pst_fields: [duration_ms, chain_step_count, error_rate, saga_triggered, saga_succeeded]
 
 kpis:
   business:
     - resolved_incident_count
-    - diagnose_success_rate
-    - knowledge_articles_returned_avg
+    - automated_fix_applied_count
+    - fix_verified_rate
+    - saga_rollback_triggered_count
   technical:
     - resolution_total_latency_ms
     - per_step_latency_ms

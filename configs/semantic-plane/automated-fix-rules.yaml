@@ -1,0 +1,36 @@
+# Business rules for the Automated Fix Agent — the project's high-risk
+# (EU AI Act Annex III) component. Every gate below is queryable + auditable
+# by a non-engineer; no fallback values are hardcoded.
+
+# Rule: automated_fix_approval
+# Permission matrix. Keyed by (fix_type, service_tier). Missing entries default
+# to NOT APPROVED — agents fail closed.
+automated_fix_approval:
+  by_fix_type:
+    okta-ca-resync:           {gold: true,  silver: true,  bronze: true}
+    vpn-mtu-fix:              {gold: true,  silver: true,  bronze: false}
+    salesforce-sso-uri-update: {gold: true, silver: false, bronze: false}
+    printer-spooler-restart:  {gold: true,  silver: true,  bronze: true}
+    wifi-firmware-downgrade:  {gold: false, silver: false, bronze: false}   # always human
+  default: false               # any fix_type not listed → human only
+
+# Rule: automated_fix_scope
+# Maximum blast radius (number of affected services) and max user count
+# the agent may touch in a single run. Any larger → requires_human.
+automated_fix_scope:
+  max_blast_radius: 5
+  max_affected_users: 200
+
+# Rule: change_freeze
+# When freeze.active = true, automated fixes are denied REGARDLESS of approval,
+# unless the incident is flagged emergency=true (the orchestrator decides).
+# This is the same rule the Priority Scorer reads; intentional shared semantics.
+change_freeze:
+  active: false
+  windows: []
+
+# Rule: rollback_required
+# Phase 1 requires snapshot + rollback for every fix type. Phase 2 may relax
+# this for idempotent fixes (e.g. cache clears) on bronze-tier services.
+rollback_required:
+  default: true

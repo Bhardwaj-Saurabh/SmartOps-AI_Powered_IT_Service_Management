@@ -376,6 +376,50 @@
       ]
     },
     {
+      "clientId": "agent-automated-fix",
+      "description": "Automated Fix Agent service account (HIGH-RISK under EU AI Act Annex III)",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-automated-fix-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {"name": "audience-self", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-automated-fix", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-litellm", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "litellm-gateway", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-sbca", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-sbca", "id.token.claim": "false", "access.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "agent-verification",
+      "description": "Verification Agent service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-verification-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {"name": "audience-self", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-verification", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-litellm", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "litellm-gateway", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-sbca", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-sbca", "id.token.claim": "false", "access.token.claim": "true"}}
+      ]
+    },
+    {
       "clientId": "agent-resolution-orchestrator",
       "description": "Resolution Workflow Orchestrator (second service-layer agent) service account",
       "enabled": true,
@@ -412,6 +456,18 @@
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-mapper",
           "config": {"included.client.audience": "agent-knowledge-search", "id.token.claim": "false", "access.token.claim": "true"}
+        },
+        {
+          "name": "audience-automated-fix",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {"included.client.audience": "agent-automated-fix", "id.token.claim": "false", "access.token.claim": "true"}
+        },
+        {
+          "name": "audience-verification",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {"included.client.audience": "agent-verification", "id.token.claim": "false", "access.token.claim": "true"}
         }
       ]
     },
@@ -503,6 +559,18 @@
       "username": "service-account-agent-resolution-orchestrator",
       "enabled": true,
       "serviceAccountClientId": "agent-resolution-orchestrator",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-automated-fix",
+      "enabled": true,
+      "serviceAccountClientId": "agent-automated-fix",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-verification",
+      "enabled": true,
+      "serviceAccountClientId": "agent-verification",
       "realmRoles": ["agent"]
     }
   ]

@@ -22,6 +22,8 @@ case "${CLIENT_ID}" in
   agent-knowledge-search)        DEFAULT_SECRET="dev-knowledge-search-secret-rotate-me" ;;
   agent-triage-orchestrator)     DEFAULT_SECRET="dev-triage-orchestrator-secret-rotate-me" ;;
   agent-resolution-orchestrator) DEFAULT_SECRET="dev-resolution-orchestrator-secret-rotate-me" ;;
+  agent-automated-fix)           DEFAULT_SECRET="dev-automated-fix-secret-rotate-me" ;;
+  agent-verification)            DEFAULT_SECRET="dev-verification-secret-rotate-me" ;;
   *)                             DEFAULT_SECRET="" ;;
 esac
 

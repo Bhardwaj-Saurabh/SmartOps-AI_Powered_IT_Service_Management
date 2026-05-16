@@ -1,0 +1,29 @@
+# Business rules for the Verification Agent.
+
+# Rule: verification_soak_period
+# After a fix succeeds, the orchestrator should schedule a re-check after the
+# soak period. Phase 1 just ANNOTATES this in the verification artifact;
+# the orchestrator does not yet schedule the re-check (Phase 2 work).
+verification_soak_period:
+  by_priority:
+    P1: 5            # minutes
+    P2: 15
+    P3: 60
+    P4: 240
+
+# Rule: verification_thresholds
+# Pass/fail thresholds for the comparison-tool's pre/post deltas.
+# A metric must improve by at least these absolute % values for the symptom
+# to be considered "resolved" on that signal.
+verification_thresholds:
+  improvement_required:
+    error_rate_pct:        50.0    # ≥50% reduction in error rate
+    handshake_failures_per_min: 70.0
+    p95_latency_ms:        10.0
+    auth_success_pct:       5.0    # ≥5pp improvement (delta from baseline)
+  symptom_must_resolve_count: 1     # at least one symptom must clear
+
+# Rule: verification_confidence
+# Minimum LLM-evaluated confidence that the fix really worked (vs flaky pass).
+verification_confidence:
+  min_to_emit_verified: 0.7

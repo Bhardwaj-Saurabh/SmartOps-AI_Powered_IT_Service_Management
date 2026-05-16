@@ -46,6 +46,20 @@ End-to-end reference implementation of the **DI AI Framework** built around an I
 - `configs/semantic-plane/knowledge-rules.yaml` — freshness max-days + vector/keyword weights
 - `scripts/seed_qdrant.py` now seeds `knowledge_articles` too; `scripts/demo_resolve.sh` exercises the chain end-to-end
 
+**Stage 4b — full Resolution flow with Saga rollback. First HIGH-RISK EU AI Act agent.**:
+- `services/automated-fix-agent/` — tactical agent #7. **HIGH-RISK under Annex III.** Chain pattern with three SBCA-controlled fail-closed gates (`automated_fix_approval`, `automated_fix_scope`, `change_freeze`), unconditional snapshot before mutation, automatic rollback on first step failure. Exposes TWO A2A skills: `apply_automated_fix` (forward path) and `rollback` (called by Saga). Full EU AI Act artifact set in [services/automated-fix-agent/docs/eu-ai-act-risk-assessment.md](services/automated-fix-agent/docs/eu-ai-act-risk-assessment.md) including FRIA.
+- `services/verification-agent/` — tactical agent #8. Anthropic parallelization (health-check + synthetic + comparison concurrent). Deterministic floor overrides LLM optimism: if no measurable improvement on any symptom metric, `fix_verified=false` regardless of what the LLM says.
+- `tools/script-executor/` + `tools/configuration-manager/` + `tools/rollback-handler/` — Automated Fix sidecars. Synthetic runbook catalogue (`okta-ca-resync`, `vpn-mtu-fix`, `salesforce-sso-uri-update`, `printer-spooler-restart`, `wifi-firmware-downgrade`). The executor honours `SIMULATE_RUNBOOK_FAILURE_AT_STEP` for testing the rollback path.
+- `tools/health-check-runner/` + `tools/synthetic-monitor/` + `tools/comparison-tool/` — Verification sidecars. Deterministic post-fix scenarios; one (`demo-unfixed`) is wired to always fail so you can exercise the Saga rollback path with real network traffic.
+- `configs/semantic-plane/automated-fix-rules.yaml` — approval matrix, scope cap, change-freeze, rollback-required.
+- `configs/semantic-plane/verification-rules.yaml` — improvement-required thresholds, min-to-emit-verified confidence, per-priority soak periods.
+- Resolution Orchestrator extended:
+  - `chain:` grows from 2 → 4 entries (Diagnostic → Knowledge Search → Automated Fix → Verify)
+  - `saga.enabled: true`, two configured compensations (artifact-predicate trigger on `fix_verified=false` AND state trigger on Verification failure) that call back into Automated Fix's `rollback` skill
+  - `_run_saga` now actually executes compensations (Stage 4a left it as a plan stub)
+  - EU AI Act doc **reclassified high-risk** — the orchestrator inherits Automated Fix's regulatory weight because it's the authorising boundary
+- `scripts/demo_full_i2r.sh` — chains Triage → Resolution end-to-end through both orchestrators.
+
 ## Quickstart
 
 ```bash
@@ -66,6 +80,8 @@ python scripts/seed_qdrant.py
 # 5. Submit a synthetic incident — choose either flow:
 scripts/demo_submit_incident.sh   # straight to Incident Intake (agent #1 only)
 scripts/demo_triage.sh            # via the Triage Orchestrator → chains all 4 tactical agents
+scripts/demo_resolve.sh           # Stage 4a — Resolution Orchestrator (Diagnostic + Knowledge)
+scripts/demo_full_i2r.sh          # Stage 4b — full I2R: Triage → Resolution (8 tactical agents)
 
 # 6. Verify the whole stack with a single PASS/FAIL run:
 scripts/smoketest.sh              # compose health + Keycloak + end-to-end triage

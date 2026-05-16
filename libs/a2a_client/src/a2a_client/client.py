@@ -34,6 +34,12 @@ class A2AClient:
       base_url:   Agent's root URL, e.g. ``http://incident-intake:8444``
       bearer:     Caller's OAuth2 token (verified by remote). Required outside dev.
       timeout:    Per-call timeout in seconds.
+
+    Two construction paths:
+      * ``A2AClient(url, bearer=...)``                       — direct, URL known up front.
+      * ``await A2AClient.from_capability("name", ...)``    — capability-based discovery
+        via the Capability Registry. Use this in service-layer orchestrators so they
+        don't hardcode tactical-agent URLs.
     """
 
     def __init__(self, base_url: str, *, bearer: str | None = None, timeout: float = 30.0) -> None:
@@ -41,6 +47,49 @@ class A2AClient:
         self._bearer = bearer
         self._timeout = timeout
         self._card: AgentCard | None = None
+
+    @classmethod
+    async def from_capability(
+        cls,
+        capability_name: str,
+        *,
+        registry_url: str,
+        bearer: str | None = None,
+        timeout: float = 30.0,
+    ) -> "A2AClient":
+        """Resolve a capability via the Capability Registry, return a client
+        bound to the URL it currently advertises.
+
+        Service-layer orchestrators use this to compose workflows over the 12
+        tactical agents without hardcoding their URLs — the framework's
+        capability-registry indirection (§5.1) made tangible.
+
+        Raises:
+          A2AClientError: capability is not registered, has no URL, or the
+            registry itself is unreachable.
+        """
+        registry = cls(registry_url, bearer=bearer, timeout=timeout)
+        task = await registry.message_send(
+            capability="capability_registry.lookup",
+            parts=[{"kind": "data", "data": {"name": capability_name}}],
+        )
+        if not task.artifacts:
+            raise A2AClientError(
+                f"Capability registry returned no artifact for '{capability_name}'"
+            )
+        entry: dict[str, Any] | None = None
+        for part in task.artifacts[0].parts:
+            if part.kind == "data":
+                entry = part.data.get("entry")
+                break
+        if entry is None:
+            raise A2AClientError(f"Capability '{capability_name}' is not registered")
+        url = entry.get("url")
+        if not url:
+            raise A2AClientError(
+                f"Capability '{capability_name}' is registered without a URL: {entry}"
+            )
+        return cls(url, bearer=bearer, timeout=timeout)
 
     async def agent_card(self) -> AgentCard:
         if self._card is not None:

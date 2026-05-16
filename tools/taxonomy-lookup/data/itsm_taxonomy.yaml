@@ -1,0 +1,64 @@
+# Synthetic ITSM taxonomy. Versioned — the version is returned so the Classification
+# Agent can hard-fail if it sees an unexpected schema.
+version: "2026.05"
+generated_at: "2026-05-12T00:00:00Z"
+
+# Top-level service areas. Each maps to a list of categories.
+service_areas:
+  network:
+    description: Connectivity, VPN, wifi, internal DNS, firewalls
+    categories:
+      - connectivity
+      - vpn
+      - wifi
+      - dns
+      - firewall
+
+  application:
+    description: SaaS apps + custom internal apps
+    categories:
+      - salesforce
+      - workday
+      - github-enterprise
+      - okta-sso
+      - confluence
+      - jira
+      - custom-internal
+
+  endpoint:
+    description: Laptops, desktops, printers, mobile
+    categories:
+      - hardware
+      - operating-system
+      - printer
+      - mobile
+
+  security:
+    description: AuthN/AuthZ, encryption, suspected breaches
+    categories:
+      - authentication
+      - authorisation
+      - data-classification
+      - phishing
+      - malware
+
+  collaboration:
+    description: Email, chat, video
+    categories:
+      - email
+      - slack
+      - teams
+      - video-conferencing
+
+# Map of services to (service_area, category). When an incident mentions a known
+# service the Classification Agent can short-circuit the area-detection step.
+services:
+  vpn:                  {service_area: network,       category: vpn}
+  cisco-anyconnect:     {service_area: network,       category: vpn}
+  wifi:                 {service_area: network,       category: wifi}
+  okta-sso:             {service_area: application,   category: okta-sso}
+  salesforce:           {service_area: application,   category: salesforce}
+  workday:              {service_area: application,   category: workday}
+  github-enterprise:    {service_area: application,   category: github-enterprise}
+  print-services:       {service_area: endpoint,      category: printer}
+  macbook-fleet:        {service_area: endpoint,      category: hardware}

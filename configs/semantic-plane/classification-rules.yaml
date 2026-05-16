@@ -1,0 +1,34 @@
+# Business rules for the Classification Agent.
+# Edit + POST /admin/reload on SBCA — no code redeploy.
+
+# Rule: classification_overrides
+# Forced classifications based on detected keywords. Security-flavoured
+# keywords win even if the LLM disagrees — compliance trumps confidence.
+classification_overrides:
+  by_keyword:
+    - keywords: ["malware", "ransomware", "phishing", "credential theft", "data leak"]
+      service_area: security
+      category: malware
+      reason: "security_keyword_override"
+    - keywords: ["aadsts50105", "okta redirect", "sso loop"]
+      service_area: application
+      category: okta-sso
+      reason: "auth_pattern_override"
+    - keywords: ["aws", "azure", "gcp", "outage"]
+      service_area: application
+      category: custom-internal
+      reason: "cloud_provider_dependency"
+
+# Rule: classification_confidence
+# Minimum LLM confidence to accept the LLM's label without falling back
+# to the historical-pattern-matcher's majority label.
+classification_confidence:
+  minimum: 0.7
+  llm_weight: 0.6           # 0..1 share of weighted confidence formula
+  history_weight: 0.4
+
+# Rule: classification_taxonomy_version
+# Hard-fail the agent if the taxonomy-lookup sidecar advertises a different
+# version — schema drift must not be silently tolerated.
+classification_taxonomy_version:
+  expected: "2026.05"

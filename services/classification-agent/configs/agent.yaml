@@ -1,0 +1,66 @@
+name: classification-agent
+version: 0.1.0
+pattern: parallelization              # Anthropic "Building Effective Agents"
+pattern_kind: workflow                # deterministic; LLM + history hop run in parallel
+
+model:
+  alias: incident-intake-chat         # reuse same Foundry chat deployment for now
+  temperature: 0.05
+  max_tokens: 512
+
+embedding:
+  alias: di-embedding
+  vector_size: 3072
+
+oidc:
+  client_id: agent-classification
+  audience: agent-classification
+
+a2a:
+  port: 8444
+  skills:
+    - id: incident_classification
+      name: Classify incident
+      description: Assign service_area + category to an incident with a confidence score
+
+mcp:
+  enabled: false                      # PRD: classification is always orchestrated
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  taxonomy_lookup:            {url: "${TAXONOMY_LOOKUP_URL:-http://taxonomy-lookup:9001}",                    timeout_seconds: 5}
+  historical_pattern_matcher: {url: "${HISTORICAL_PATTERN_MATCHER_URL:-http://historical-pattern-matcher:9002}", timeout_seconds: 5}
+
+prompts:
+  classify_system_path: /app/configs/prompts/classification/classify.system.txt
+  classify_user_path:   /app/configs/prompts/classification/classify.user.txt
+
+semantic_queries:
+  classification_overrides:        "classification_overrides"
+  classification_confidence:       "classification_confidence"
+  classification_taxonomy_version: "classification_taxonomy_version"
+
+audit:
+  cat_fields: [llm_prompt, llm_response, history_matches, weighted_decision_chain]
+  pst_fields: [duration_ms, token_count, tools_called, sidecar_latency_ms]
+
+kpis:
+  business:
+    - classification_count
+    - override_applied_count
+    - history_supports_llm_rate     # 0..1 — pattern matcher agreeing with LLM
+    - low_confidence_count
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - parallel_step_latency_ms
+    - sidecar_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

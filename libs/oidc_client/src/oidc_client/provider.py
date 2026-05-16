@@ -1,7 +1,13 @@
-"""Client-credentials JWT fetch for downstream A2A + LiteLLM calls.
+"""Async OIDC client-credentials token provider with caching.
 
-Caches the token until just before expiry. Service-account secret comes from
-``OIDC_CLIENT_SECRET`` env var, never committed.
+Used by every agent that calls another A2A peer or the AI Gateway. The
+token is cached until just before expiry (``leeway_seconds`` headroom).
+``build_default_provider()`` reads the standard env contract:
+
+  * ``KEYCLOAK_REALM_URL``     — e.g. ``http://keycloak:8080/realms/smartops``
+  * ``OIDC_CLIENT_ID``         — e.g. ``agent-incident-intake``
+  * ``OIDC_CLIENT_SECRET``     — from ``infra/.env.local`` (never committed)
+  * ``DEV_ALLOW_UNVERIFIED_JWT`` — ``true`` returns ``None`` (dev escape hatch)
 """
 from __future__ import annotations
 
@@ -50,14 +56,17 @@ class OIDCTokenProvider:
 
 
 def build_default_provider() -> OIDCTokenProvider | None:
-    """Build a provider from env. Returns None if DEV bypass is enabled."""
+    """Build a provider from the standard agent env contract. Returns ``None``
+    when ``DEV_ALLOW_UNVERIFIED_JWT=true`` so callers fall through to the
+    dev-bypass path. Raises ``AgentError`` if the env contract is incomplete
+    in non-dev mode — fail loudly, never assume a default."""
     if os.environ.get("DEV_ALLOW_UNVERIFIED_JWT", "false").lower() == "true":
         return None
     realm_url = os.environ.get("KEYCLOAK_REALM_URL", "")
     client_id = os.environ.get("OIDC_CLIENT_ID", "")
     secret = os.environ.get("OIDC_CLIENT_SECRET", "")
     if not (realm_url and client_id and secret):
-        raise AgentError("KEYCLOAK_REALM_URL, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET must be set")
+        raise AgentError("KEYCLOAK_REALM_URL, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET must all be set")
     return OIDCTokenProvider(
         token_url=f"{realm_url.rstrip('/')}/protocol/openid-connect/token",
         client_id=client_id,

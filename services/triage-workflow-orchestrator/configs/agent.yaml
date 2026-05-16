@@ -1,0 +1,51 @@
+name: triage-workflow-orchestrator
+version: 0.1.0
+pattern: chain                        # Anthropic; deterministic sequence of A2A calls
+pattern_kind: workflow
+
+oidc:
+  client_id: agent-triage-orchestrator
+  audience: agent-triage-orchestrator
+
+a2a:
+  port: 8444
+  skills:
+    - id: triage_incident
+      name: Triage an incident
+      description: Chain Incident Intake + Classification (Stage 3a) into a single triaged-incident output
+
+# Capabilities this orchestrator chains. Resolved at runtime via the
+# Capability Registry on SBCA — NO hardcoded URLs. Adding more capabilities
+# in Stage 3b (priority_scoring, incident_routing) requires only one new entry.
+chain:
+  - capability: incident_intake
+    skill: submit_incident
+    step_label: triage.intake
+    forward_field: null               # uses raw input from triage_incident caller
+  - capability: incident_classification
+    skill: incident_classification
+    step_label: triage.classify
+    forward_field: incident           # forwards the incident artifact from the previous step
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+  registry_url: "${SBCA_URL:-http://sbca:8444}"
+
+audit:
+  cat_fields: [chain_inputs, chain_outputs, failed_step_index]
+  pst_fields: [duration_ms, chain_step_count, error_rate]
+
+kpis:
+  business:
+    - triaged_incident_count
+    - early_exit_count                # short-circuits (duplicate, input-required)
+    - chain_completion_rate
+  technical:
+    - triage_total_latency_ms
+    - per_step_latency_ms
+    - downstream_a2a_error_rate
+
+resilience:
+  step_retry:   {attempts: 1, backoff: linear}    # downstream tactical agents already retry
+  saga:        compensate_on_failure              # log only in Phase 1 — real undo arrives with Automated Fix

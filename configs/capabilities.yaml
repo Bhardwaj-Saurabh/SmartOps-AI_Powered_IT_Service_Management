@@ -10,6 +10,18 @@ capabilities:
       - submit_incident
       - check_duplicate
 
+  - name: incident_classification
+    url: http://classification-agent:8444
+    version: 0.1.0
+    skills:
+      - incident_classification
+
+  - name: triage_incident
+    url: http://triage-workflow-orchestrator:8444
+    version: 0.1.0
+    skills:
+      - triage_incident
+
   - name: semantic.query_rule
     url: http://sbca:8444
     version: 0.1.0

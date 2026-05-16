@@ -11,13 +11,21 @@ End-to-end reference implementation of the **DI AI Framework** built around an I
 **Stage 1 — shared libraries** (`libs/`):
 `di_framework_core`, `config_loader`, `observability`, `a2a_server` (spec-native Google A2A — no wrappers), `a2a_client`, `gateway_client` (LiteLLM / OpenAI-shape), `semantic_client` (A2A wrapper to SBCA).
 
-**Stage 2 — first runnable stack**:
-- `services/incident-intake-agent/` — tactical agent, Anthropic prompt-chaining pattern, 12-step workflow
+**Stage 2 — first runnable stack** (Incident Intake Agent #1):
+- `services/incident-intake-agent/` — tactical agent #1, Anthropic prompt-chaining pattern, 12-step workflow
 - `services/strategic-business-context-agent/` — SBCA stub (rule queries + capability registry)
 - `tools/{email-parser,slack-connector,form-normaliser}/` — three sidecar tools
 - `infra/` — Docker Compose, LiteLLM v1.83.10-stable (hardened per CVE-2026-42208), Keycloak with `smartops` realm, OTEL Collector with CAT/PST split, Qdrant, Redis
-- `configs/semantic-plane/*.yaml` — versioned business rules
+- `configs/semantic-plane/intake-rules.yaml` — versioned business rules
 - `scripts/` — token fetch, Qdrant seed, A2A demo
+
+**Stage 3a — Classification Agent + first service-layer agent**:
+- `libs/oidc_client/` — shared OIDC client-credentials provider (reused by every agent)
+- `libs/a2a_client/` — adds `A2AClient.from_capability(...)` for registry-based discovery
+- `services/classification-agent/` — tactical agent #2, **Anthropic parallelization** (LLM + history matcher run concurrently)
+- `services/triage-workflow-orchestrator/` — **first service-layer agent**; composes tactical agents purely through the Capability Registry, no hardcoded peer URLs
+- `tools/taxonomy-lookup/` + `tools/historical-pattern-matcher/` — 2 new sidecars
+- `configs/semantic-plane/classification-rules.yaml` — overrides, confidence weights, taxonomy version pin
 
 ## Quickstart
 
@@ -36,11 +44,12 @@ docker compose -f infra/docker-compose.yaml ps
 export GATEWAY_TOKEN="$(scripts/get_token.sh agent-incident-intake)"
 python scripts/seed_qdrant.py
 
-# 5. Submit a synthetic incident via A2A
-scripts/demo_submit_incident.sh
+# 5. Submit a synthetic incident — choose either flow:
+scripts/demo_submit_incident.sh   # straight to Incident Intake (agent #1 only)
+scripts/demo_triage.sh            # via the Triage Orchestrator → chains Intake + Classification
 ```
 
-The response is an A2A `Task` JSON. On the happy path you'll see `state: "completed"` with a structured incident artifact. The `tests/data/` folder has more sample payloads — swap them into `scripts/demo_submit_incident.sh` to exercise the duplicate branch (use `near_duplicate_vpn` after seeding) and the clarification branch (use `printer_jam_vague`).
+The triage demo is the proof of the composition story: the orchestrator never sees a peer URL — it asks the Capability Registry for whichever agent is registered under each capability name. Adding more agents to the chain in Stage 3b will be a one-line `chain:` edit in `services/triage-workflow-orchestrator/configs/agent.yaml`.
 
 ## Inspecting the dual audit trail
 

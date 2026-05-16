@@ -1,0 +1,9 @@
+Allowed service_areas: {service_areas}
+Allowed categories by service_area (JSON): {allowed_categories_json}
+
+Incident:
+- Affected service: {affected_service}
+- Symptoms summary: {symptoms_summary}
+- Symptoms verbatim: {symptoms_verbatim}
+
+Classify the incident.

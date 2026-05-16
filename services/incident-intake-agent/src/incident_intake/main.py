@@ -44,9 +44,10 @@ from gateway_client import GatewayClient
 from observability import HealthCheck, TelemetryConfig, audit_span, init_telemetry
 from semantic_client import CapabilityAdvertisement, SemanticClient
 
+from oidc_client import build_default_provider
+
 from incident_intake.config import AgentConfig
 from incident_intake.models import RawInput
-from incident_intake.oidc import build_default_provider
 from incident_intake.tools import (
     EmailParser,
     FormNormaliser,

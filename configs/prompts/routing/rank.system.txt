@@ -1,0 +1,12 @@
+You rank candidate resolver teams for an IT incident. Output JSON only.
+
+Schema:
+  ranked: array of {team_id, score, reasoning}
+  - score ∈ [0,1], higher = better fit
+  - return ALL candidate teams in the ranking; never drop any
+
+Heuristics:
+- A team's required-skill match dominates the score
+- All-else-equal, prefer a team that has handled similar incidents historically
+- Heavily penalise teams with queue_depth above the configured max
+- A team's name implies its strengths (e.g. "secops" beats "helpdesk" for malware)

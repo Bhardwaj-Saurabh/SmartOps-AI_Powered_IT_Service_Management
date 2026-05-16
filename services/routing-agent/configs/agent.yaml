@@ -1,0 +1,62 @@
+name: routing-agent
+version: 0.1.0
+pattern: parallelization              # team-directory + skill-matrix queried concurrently
+pattern_kind: workflow
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.05
+  max_tokens: 384
+
+oidc:
+  client_id: agent-routing
+  audience: agent-routing
+
+a2a:
+  port: 8444
+  skills:
+    - id: incident_routing
+      name: Route to resolver team
+      description: Pick a resolver team from rules + skill matrix + LLM ranking
+
+mcp:
+  enabled: false
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  team_directory:    {url: "${TEAM_DIRECTORY_URL:-http://team-directory-connector:9001}",  timeout_seconds: 5}
+  skill_matrix:      {url: "${SKILL_MATRIX_URL:-http://skill-matrix-lookup:9002}",         timeout_seconds: 5}
+
+prompts:
+  rank_system_path: /app/configs/prompts/routing/rank.system.txt
+  rank_user_path:   /app/configs/prompts/routing/rank.user.txt
+
+semantic_queries:
+  routing_rules:               "routing_rules"
+  routing_priority_overrides:  "routing_priority_overrides"
+  load_balancing:              "load_balancing"
+  routing_llm_weight:          "routing_llm_weight"
+
+audit:
+  cat_fields: [llm_prompt, llm_response, candidate_pool, weighted_ranking, decision_chain]
+  pst_fields: [duration_ms, candidate_count, chosen_team, error_class]
+
+kpis:
+  business:
+    - routed_incident_count
+    - p1_routed_to_incident_commander_count
+    - over_capacity_team_count
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - parallel_step_latency_ms
+    - sidecar_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

@@ -16,6 +16,18 @@ capabilities:
     skills:
       - incident_classification
 
+  - name: priority_scoring
+    url: http://priority-scorer:8444
+    version: 0.1.0
+    skills:
+      - priority_scoring
+
+  - name: incident_routing
+    url: http://routing-agent:8444
+    version: 0.1.0
+    skills:
+      - incident_routing
+
   - name: triage_incident
     url: http://triage-workflow-orchestrator:8444
     version: 0.1.0

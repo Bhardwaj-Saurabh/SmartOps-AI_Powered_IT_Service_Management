@@ -12,20 +12,33 @@ a2a:
   skills:
     - id: triage_incident
       name: Triage an incident
-      description: Chain Incident Intake + Classification (Stage 3a) into a single triaged-incident output
+      description: Chain Incident Intake + Classification + Priority Scoring + Routing into a single triaged-incident output
 
 # Capabilities this orchestrator chains. Resolved at runtime via the
-# Capability Registry on SBCA — NO hardcoded URLs. Adding more capabilities
-# in Stage 3b (priority_scoring, incident_routing) requires only one new entry.
+# Capability Registry on SBCA — NO hardcoded URLs. Adding a new tactical
+# agent (e.g. Stage 4's Diagnostic Agent) is one more entry below.
 chain:
   - capability: incident_intake
     skill: submit_incident
     step_label: triage.intake
-    forward_field: null               # uses raw input from triage_incident caller
+    forward_field: null               # uses raw input from the triage_incident caller
   - capability: incident_classification
     skill: incident_classification
     step_label: triage.classify
     forward_field: incident           # forwards the incident artifact from the previous step
+  - capability: priority_scoring
+    skill: priority_scoring
+    step_label: triage.prioritise
+    compose_inputs:                   # multi-source composite — built by the orchestrator
+      incident:       "0.incident"
+      classification: "1.classification"
+  - capability: incident_routing
+    skill: incident_routing
+    step_label: triage.route
+    compose_inputs:
+      incident:       "0.incident"
+      classification: "1.classification"
+      priority:       "2.priority"
 
 capability_registry:
   register_on_startup: true

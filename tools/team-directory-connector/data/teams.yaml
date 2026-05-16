@@ -1,0 +1,51 @@
+# Synthetic resolver-team directory. queue_depth is fixed for Phase 1;
+# in Phase 2+ this becomes a live ticketing-system query.
+
+teams:
+  network-ops:
+    description: Core networking, firewalls, VPN
+    available: true
+    queue_depth: 3
+    on_call: "alice@example.com"
+
+  platform-engineering:
+    description: Internal platform + service mesh
+    available: true
+    queue_depth: 6
+    on_call: "bob@example.com"
+
+  app-support:
+    description: SaaS app support — Salesforce, Workday, Confluence, Jira
+    available: true
+    queue_depth: 4
+    on_call: "chris@example.com"
+
+  devops:
+    description: CI/CD, GitHub Enterprise, deployment tooling
+    available: true
+    queue_depth: 2
+    on_call: "dana@example.com"
+
+  endpoint-support:
+    description: Laptops, mobile devices, printers
+    available: true
+    queue_depth: 5
+    on_call: "ed@example.com"
+
+  helpdesk:
+    description: First-line generalists, triage backup
+    available: true
+    queue_depth: 7
+    on_call: "frank@example.com"
+
+  secops:
+    description: Security operations, malware, identity incidents
+    available: true
+    queue_depth: 1
+    on_call: "grace@example.com"
+
+  incident-commander:
+    description: P1 incident commander on-call rotation
+    available: true
+    queue_depth: 0
+    on_call: "ivan@example.com"

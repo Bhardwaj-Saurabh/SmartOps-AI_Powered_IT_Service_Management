@@ -140,6 +140,98 @@
       ]
     },
     {
+      "clientId": "agent-priority-scorer",
+      "description": "Priority Scorer service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-priority-scorer-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {
+          "name": "audience-self",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "agent-priority-scorer",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-litellm",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "litellm-gateway",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-sbca",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "agent-sbca",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "agent-routing",
+      "description": "Routing Agent service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-routing-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {
+          "name": "audience-self",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "agent-routing",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-litellm",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "litellm-gateway",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-sbca",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "agent-sbca",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "agent-triage-orchestrator",
       "description": "Triage Workflow Orchestrator (first service-layer agent) service account",
       "enabled": true,
@@ -189,6 +281,26 @@
           "protocolMapper": "oidc-audience-mapper",
           "config": {
             "included.client.audience": "agent-classification",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-priority-scorer",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "agent-priority-scorer",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-routing",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "agent-routing",
             "id.token.claim": "false",
             "access.token.claim": "true"
           }
@@ -253,6 +365,18 @@
       "username": "service-account-agent-triage-orchestrator",
       "enabled": true,
       "serviceAccountClientId": "agent-triage-orchestrator",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-priority-scorer",
+      "enabled": true,
+      "serviceAccountClientId": "agent-priority-scorer",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-routing",
+      "enabled": true,
+      "serviceAccountClientId": "agent-routing",
       "realmRoles": ["agent"]
     }
   ]

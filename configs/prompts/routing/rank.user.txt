@@ -1,0 +1,10 @@
+Incident
+- Service: {affected_service}
+- Service area / category: {service_area} / {category}
+- Priority: {priority}
+- Symptoms summary: {symptoms_summary}
+
+Candidate teams (JSON):
+{candidates_json}
+
+Rank them.

@@ -1,0 +1,62 @@
+name: priority-scorer
+version: 0.1.0
+pattern: chain                        # Anthropic "Building Effective Agents"
+pattern_kind: workflow
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.05
+  max_tokens: 256
+
+oidc:
+  client_id: agent-priority-scorer
+  audience: agent-priority-scorer
+
+a2a:
+  port: 8444
+  skills:
+    - id: priority_scoring
+      name: Score priority
+      description: Compute P1–P4 priority from impact narrative + blast radius + VIP rules
+
+mcp:
+  enabled: false
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  impact_analyser:           {url: "${IMPACT_ANALYSER_URL:-http://impact-analyser:9001}",                       timeout_seconds: 5}
+  service_dependency_mapper: {url: "${SERVICE_DEPENDENCY_MAPPER_URL:-http://service-dependency-mapper:9002}",   timeout_seconds: 5}
+
+prompts:
+  impact_system_path: /app/configs/prompts/priority/impact.system.txt
+  impact_user_path:   /app/configs/prompts/priority/impact.user.txt
+
+semantic_queries:
+  priority_matrix:           "priority_matrix"
+  vip_priority_overrides:    "vip_priority_overrides"
+  blast_radius_thresholds:   "blast_radius_thresholds"
+  change_freeze:             "change_freeze"
+
+audit:
+  cat_fields: [llm_prompt, llm_response, decision_chain, matrix_lookup]
+  pst_fields: [duration_ms, blast_radius, applied_override, priority_emitted]
+
+kpis:
+  business:
+    - p1_count
+    - p2_count
+    - vip_override_count
+    - high_blast_radius_count
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - sidecar_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

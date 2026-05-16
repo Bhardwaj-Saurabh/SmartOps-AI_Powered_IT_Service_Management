@@ -149,11 +149,29 @@ class TriageRunner:
         initial_payload: dict[str, Any],
         chain_outputs: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        if not chain_outputs or step.forward_field is None:
-            return initial_payload
-        prev = chain_outputs[-1]
-        for artifact in prev.get("artifacts") or []:
-            if artifact.get("name") == step.forward_field and artifact.get("data"):
-                return artifact["data"]
-        # Fall back: pass the raw payload again if the named artifact isn't there.
+        # Composite mode wins — build a multi-source payload by reference.
+        if step.compose_inputs:
+            composite: dict[str, Any] = {}
+            for key, ref in step.compose_inputs.items():
+                try:
+                    step_idx_str, artifact_name = ref.split(".", 1)
+                    step_idx = int(step_idx_str)
+                except ValueError:
+                    continue
+                if step_idx >= len(chain_outputs):
+                    continue
+                source_step = chain_outputs[step_idx]
+                for artifact in source_step.get("artifacts") or []:
+                    if artifact.get("name") == artifact_name and artifact.get("data") is not None:
+                        composite[key] = artifact["data"]
+                        break
+            return composite if composite else initial_payload
+
+        # Simple mode — forward a single named artifact's data.
+        if chain_outputs and step.forward_field is not None:
+            prev = chain_outputs[-1]
+            for artifact in prev.get("artifacts") or []:
+                if artifact.get("name") == step.forward_field and artifact.get("data"):
+                    return artifact["data"]
+
         return initial_payload

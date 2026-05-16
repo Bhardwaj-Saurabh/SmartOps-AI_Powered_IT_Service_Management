@@ -1,0 +1,8 @@
+Incident
+- Service: {affected_service}
+- Service area / category: {service_area} / {category}
+- VIP reporter: {reporter_vip}
+- Summary: {symptoms_summary}
+- Verbatim: {symptoms_verbatim}
+
+Output the impact/urgency JSON.

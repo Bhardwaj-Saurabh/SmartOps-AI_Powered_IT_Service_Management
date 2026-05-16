@@ -27,6 +27,15 @@ End-to-end reference implementation of the **DI AI Framework** built around an I
 - `tools/taxonomy-lookup/` + `tools/historical-pattern-matcher/` — 2 new sidecars
 - `configs/semantic-plane/classification-rules.yaml` — overrides, confidence weights, taxonomy version pin
 
+**Stage 3b — full Triage flow (4 tactical agents chained)**:
+- `services/priority-scorer/` — tactical agent #3, **Anthropic prompt-chaining** (10-step deterministic chain with one LLM impact/urgency call)
+- `services/routing-agent/` — tactical agent #4, **Anthropic parallelization** (team-directory + skill-matrix queried concurrently)
+- `tools/impact-analyser/` + `tools/service-dependency-mapper/` (synthetic CMDB topology) — Priority Scorer's sidecars
+- `tools/team-directory-connector/` + `tools/skill-matrix-lookup/` (synthetic teams + competencies) — Routing Agent's sidecars
+- `configs/semantic-plane/priority-rules.yaml` — Impact × Urgency matrix, VIP overrides, blast-radius thresholds, change-freeze
+- `configs/semantic-plane/routing-rules.yaml` — per-area resolver-team rules, priority overrides, load-balancing cap, LLM weight
+- Triage Orchestrator extended with `compose_inputs` so Priority + Routing get multi-source composite payloads. **Adding the next tactical agent (Diagnostic in Stage 4) is one more chain entry — no agent edits.**
+
 ## Quickstart
 
 ```bash

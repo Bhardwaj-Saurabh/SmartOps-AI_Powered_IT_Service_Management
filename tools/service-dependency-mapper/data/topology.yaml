@@ -1,0 +1,60 @@
+# Synthetic service topology — a tiny CMDB-style adjacency map.
+# upstream:   things THIS service depends on
+# downstream: things that depend on THIS service
+# tier:       gold/silver/bronze; gold = most critical
+
+services:
+  vpn:
+    tier: gold
+    upstream: [active-directory, firewall, dns]
+    downstream: [salesforce, workday, github-enterprise, internal-wiki, jira]
+
+  active-directory:
+    tier: gold
+    upstream: []
+    downstream: [vpn, okta-sso, salesforce, workday]
+
+  okta-sso:
+    tier: gold
+    upstream: [active-directory]
+    downstream: [salesforce, workday, github-enterprise]
+
+  salesforce:
+    tier: gold
+    upstream: [okta-sso]
+    downstream: []
+
+  workday:
+    tier: silver
+    upstream: [okta-sso]
+    downstream: []
+
+  github-enterprise:
+    tier: gold
+    upstream: [okta-sso]
+    downstream: [ci-runners]
+
+  firewall:
+    tier: gold
+    upstream: []
+    downstream: [vpn, dns]
+
+  dns:
+    tier: gold
+    upstream: []
+    downstream: [vpn, okta-sso, salesforce, workday, github-enterprise]
+
+  wifi:
+    tier: silver
+    upstream: [dns, firewall]
+    downstream: []
+
+  print-services:
+    tier: bronze
+    upstream: []
+    downstream: []
+
+  macbook-fleet:
+    tier: silver
+    upstream: []
+    downstream: []

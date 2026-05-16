@@ -1,0 +1,18 @@
+[project]
+name = "tool-skill-matrix-lookup"
+version = "0.1.0"
+description = "Maps required incident skills to teams that have them (synthetic skill matrix for Phase 1)"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/skill_matrix_lookup"]

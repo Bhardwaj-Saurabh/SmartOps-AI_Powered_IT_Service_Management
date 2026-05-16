@@ -1,0 +1,55 @@
+# Business rules for the Priority Scorer.
+# Edit + POST /admin/reload on SBCA — no code redeploy.
+
+# Rule: priority_matrix
+# Classic Impact × Urgency → Priority (P1–P4) matrix.
+# Impact: low|medium|high|critical    (rows)
+# Urgency: low|medium|high|critical   (cols)
+priority_matrix:
+  critical:
+    critical: P1
+    high: P1
+    medium: P2
+    low: P3
+  high:
+    critical: P1
+    high: P2
+    medium: P2
+    low: P3
+  medium:
+    critical: P2
+    high: P3
+    medium: P3
+    low: P4
+  low:
+    critical: P3
+    high: P3
+    medium: P4
+    low: P4
+
+# Rule: vip_priority_overrides
+# Force minimum priority for VIP-flagged incidents regardless of matrix.
+vip_priority_overrides:
+  by_department:
+    executive: P1                # board / C-suite → always P1
+    board: P1
+    finance-c-suite: P2
+
+# Rule: blast_radius_thresholds
+# Number of affected downstream services → urgency floor.
+blast_radius_thresholds:
+  - lt: 2
+    urgency_floor: low
+  - lt: 5
+    urgency_floor: medium
+  - lt: 15
+    urgency_floor: high
+  - lt: 99999
+    urgency_floor: critical
+
+# Rule: change_freeze
+# If we're inside a freeze window the Automated Fix Agent is denied (Stage 4+).
+# Priority Scorer references it only to annotate the decision chain.
+change_freeze:
+  active: false
+  windows: []

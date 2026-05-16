@@ -1,0 +1,28 @@
+# Business rules for the Routing Agent.
+
+# Rule: routing_rules
+# Service-area → preferred resolver team. The Routing Agent always validates
+# the suggestion against team availability + skill matrix before assigning.
+routing_rules:
+  by_service_area:
+    network:        [network-ops, platform-engineering]
+    application:    [app-support, devops]
+    endpoint:       [endpoint-support, helpdesk]
+    security:       [secops]
+    collaboration:  [helpdesk, app-support]
+
+# Rule: routing_priority_overrides
+# At P1/P2 escalate to the on-call / specialist team regardless of category.
+routing_priority_overrides:
+  P1: [incident-commander, secops, network-ops]
+  P2: [secops, network-ops]
+
+# Rule: load_balancing
+# Allowed queue depth before a team is skipped in favour of the next candidate.
+load_balancing:
+  max_queue_depth: 8
+  rebalance: round_robin
+
+# Rule: routing_llm_weight
+# How heavily to trust the LLM's ranking vs raw rule-based ordering.
+routing_llm_weight: 0.4

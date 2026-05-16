@@ -1,0 +1,39 @@
+# Synthetic skill matrix. Maps a (service_area, category) pair to required
+# skills, and each team's competency in those skills (0..1).
+
+required_skills_by_category:
+  network/vpn:        [networking, vpn-tunnels, firewall-rules]
+  network/wifi:       [networking, wireless-rf, ap-firmware]
+  network/dns:        [networking, dns, bind]
+  network/connectivity: [networking, ip-routing]
+  network/firewall:   [networking, firewall-rules, ids-ips]
+  application/salesforce:    [crm, salesforce, sso-troubleshooting]
+  application/workday:       [hr-systems, workday, sso-troubleshooting]
+  application/github-enterprise: [git, sso-troubleshooting, ci-runners]
+  application/okta-sso:      [identity, sso-troubleshooting, saml]
+  application/jira:          [atlassian, app-admin]
+  application/confluence:    [atlassian, app-admin]
+  application/custom-internal: [app-admin]
+  endpoint/hardware:    [imaging, mdm]
+  endpoint/printer:     [printing, spooler]
+  endpoint/mobile:      [mdm, ios, android]
+  endpoint/operating-system: [imaging, windows-admin, mac-admin]
+  security/authentication:  [identity, sso-troubleshooting]
+  security/authorisation:   [rbac, identity]
+  security/data-classification: [data-protection]
+  security/phishing:        [security-incident-response, phishing]
+  security/malware:         [security-incident-response, edr]
+  collaboration/email:      [exchange, smtp]
+  collaboration/slack:      [slack-admin]
+  collaboration/teams:      [teams-admin]
+  collaboration/video-conferencing: [av-support]
+
+team_competencies:
+  network-ops:        {networking: 1.0, vpn-tunnels: 0.9, firewall-rules: 0.9, dns: 0.9, bind: 0.8, ip-routing: 0.9, ids-ips: 0.7, wireless-rf: 0.6, ap-firmware: 0.6}
+  platform-engineering: {networking: 0.7, ip-routing: 0.7, dns: 0.6}
+  app-support:        {crm: 0.9, salesforce: 0.9, hr-systems: 0.8, workday: 0.8, sso-troubleshooting: 0.7, atlassian: 0.8, app-admin: 0.9}
+  devops:             {git: 1.0, ci-runners: 1.0, sso-troubleshooting: 0.6, app-admin: 0.7}
+  endpoint-support:   {imaging: 0.9, mdm: 0.9, windows-admin: 0.8, mac-admin: 0.8, ios: 0.7, android: 0.7, printing: 0.9, spooler: 0.9}
+  helpdesk:           {imaging: 0.4, mdm: 0.4, printing: 0.6, exchange: 0.5, app-admin: 0.4}
+  secops:             {identity: 1.0, sso-troubleshooting: 0.9, saml: 0.9, rbac: 1.0, data-protection: 1.0, "security-incident-response": 1.0, phishing: 1.0, edr: 1.0}
+  incident-commander: {}

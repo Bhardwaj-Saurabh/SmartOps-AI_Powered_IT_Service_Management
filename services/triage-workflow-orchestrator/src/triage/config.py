@@ -25,9 +25,20 @@ class ChainStep(BaseModel):
     skill: str
     step_label: str
     forward_field: str | None = None
-    """When set, take the previous step's artifact named ``<forward_field>``
-    (if it exists) and forward it as the next step's input under the same
-    key. ``None`` means forward the original ``triage_incident`` payload."""
+    """Simple mode: take the previous step's artifact named ``<forward_field>``
+    and forward its ``data`` as the next step's input. ``None`` and no
+    ``compose_inputs`` means forward the original ``triage_incident`` payload."""
+    compose_inputs: dict[str, str] | None = None
+    """Composite mode for steps that need data from multiple prior steps.
+    Keys become top-level fields of the next message's data payload. Values
+    are ``"<step_index>.<artifact_name>"`` references — e.g.::
+
+        compose_inputs:
+          incident:       "0.incident"
+          classification: "1.classification"
+          priority:       "2.priority"
+
+    Mutually exclusive with ``forward_field``."""
 
 
 class CapabilityRegistryCfg(BaseModel):

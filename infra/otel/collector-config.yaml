@@ -1,15 +1,17 @@
 # OpenTelemetry Collector — DI AI Framework §6.3 dual-pipeline split.
 #
-# Every span/log/metric arrives with attribute `audit.type` ∈ {confidential, platform}.
-# Two parallel pipelines:
+# Every span/log arrives with attribute `audit.type` ∈ {confidential, platform}.
+# Two parallel pipelines using the contrib `filter` processor:
 #
-#   CAT  (confidential audit trail) — full content, encrypted store, 7-year retention,
-#                                     access RBAC + MFA. Drops nothing.
-#   PST  (platform support trail)   — anonymised, 90-day retention, ops/dev access.
-#                                     The redact processor strips sensitive attrs.
+#   CAT  (confidential audit trail) — keeps audit.type=confidential only.
+#                                     Full content, file sink, 30-day rotation.
+#   PST  (platform support trail)   — drops audit.type=confidential.
+#                                     Keeps platform + un-tagged spans (FastAPI
+#                                     auto-spans). Redaction processor strips
+#                                     known-sensitive attrs from this stream.
 #
-# Exporters are CONFIGURABLE (§6.4) — swap file sinks for Elastic / vault later
-# without touching agent code.
+# Exporters are configurable — swap file sinks for Elasticsearch / encrypted
+# vault later without touching agent code (framework §6.4).
 
 receivers:
   otlp:
@@ -24,80 +26,68 @@ processors:
     timeout: 5s
     send_batch_size: 512
 
-  # Add resource-level metadata to every signal.
   resource:
     attributes:
       - key: deployment.environment
-        value: ${env:DEPLOY_ENV:-local}
+        value: local
         action: upsert
       - key: framework
         value: di-ai
         action: upsert
 
-  # Route by audit.type into two named pipelines.
-  routing/audit:
-    from_attribute: audit.type
-    default_pipelines: [traces/pst]            # if missing → treat as platform (PII-safe default)
-    table:
-      - value: confidential
-        pipelines: [traces/cat]
-      - value: platform
-        pipelines: [traces/pst]
+  # Keep ONLY audit.type=confidential. The filter drops everything that doesn't
+  # match the predicate; we want to drop everything that's not confidential.
+  filter/cat:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["audit.type"] != "confidential"'
+    logs:
+      log_record:
+        - 'attributes["audit.type"] != "confidential"'
 
-  routing/audit_logs:
-    from_attribute: audit.type
-    default_pipelines: [logs/pst]
-    table:
-      - value: confidential
-        pipelines: [logs/cat]
-      - value: platform
-        pipelines: [logs/pst]
+  # Drop audit.type=confidential. Everything else (platform + missing tag, like
+  # FastAPI's auto-spans) flows through to the platform pipeline.
+  filter/pst:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["audit.type"] == "confidential"'
+    logs:
+      log_record:
+        - 'attributes["audit.type"] == "confidential"'
 
-  # Strip sensitive attributes from anything going to PST.
-  # CAT keeps them. The list is conservative — extend per agent if needed.
+  # Strip known-sensitive attributes from anything on the PST pipeline.
+  # CAT keeps them. Conservative list; extend per agent as needed.
   attributes/redact_pst:
     actions:
-      - key: incident.reporter
-        action: delete
-      - key: incident.full_content
-        action: delete
-      - key: message.body
-        action: delete
-      - key: user.email
-        action: delete
-      - key: tool.payload
-        action: delete
+      - {key: incident.reporter,     action: delete}
+      - {key: incident.full_content, action: delete}
+      - {key: message.body,          action: delete}
+      - {key: user.email,            action: delete}
+      - {key: tool.payload,          action: delete}
+      - {key: llm_prompt,            action: delete}
+      - {key: llm_response,          action: delete}
+      - {key: prompt,                action: delete}
+      - {key: response,              action: delete}
 
 exporters:
-  # CAT — file sink for Phase 1. In Phase 2 this becomes an encrypted-vault exporter.
+  # Phase 1 — file sinks. Phase 2 swaps to encrypted-vault (CAT) and
+  # Elasticsearch (PST) without code changes.
   file/cat_traces:
     path: /var/log/cat/traces.jsonl
-    rotation:
-      max_megabytes: 100
-      max_days: 30
-      max_backups: 5
+    rotation: {max_megabytes: 100, max_days: 30, max_backups: 5}
   file/cat_logs:
     path: /var/log/cat/logs.jsonl
-    rotation:
-      max_megabytes: 100
-      max_days: 30
-      max_backups: 5
-
-  # PST — file sink for Phase 1. In Phase 2 this becomes Elasticsearch / Loki.
+    rotation: {max_megabytes: 100, max_days: 30, max_backups: 5}
   file/pst_traces:
     path: /var/log/pst/traces.jsonl
-    rotation:
-      max_megabytes: 100
-      max_days: 7
-      max_backups: 3
+    rotation: {max_megabytes: 100, max_days: 7, max_backups: 3}
   file/pst_logs:
     path: /var/log/pst/logs.jsonl
-    rotation:
-      max_megabytes: 100
-      max_days: 7
-      max_backups: 3
+    rotation: {max_megabytes: 100, max_days: 7, max_backups: 3}
 
-  # Phase-1 stdout exporter for inspection during `docker compose logs -f otel-collector`.
+  # Stdout for `docker compose logs -f otel-collector` inspection.
   debug:
     verbosity: basic
 
@@ -108,30 +98,22 @@ extensions:
 service:
   extensions: [health_check]
   pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [batch, resource, routing/audit]
-      exporters: [debug]
     traces/cat:
       receivers: [otlp]
-      processors: [resource]
+      processors: [batch, resource, filter/cat]
       exporters: [file/cat_traces]
     traces/pst:
       receivers: [otlp]
-      processors: [resource, attributes/redact_pst]
-      exporters: [file/pst_traces]
-    logs:
-      receivers: [otlp]
-      processors: [batch, resource, routing/audit_logs]
-      exporters: [debug]
+      processors: [batch, resource, filter/pst, attributes/redact_pst]
+      exporters: [file/pst_traces, debug]
     logs/cat:
       receivers: [otlp]
-      processors: [resource]
+      processors: [batch, resource, filter/cat]
       exporters: [file/cat_logs]
     logs/pst:
       receivers: [otlp]
-      processors: [resource, attributes/redact_pst]
-      exporters: [file/pst_logs]
+      processors: [batch, resource, filter/pst, attributes/redact_pst]
+      exporters: [file/pst_logs, debug]
     metrics:
       receivers: [otlp]
       processors: [batch, resource]

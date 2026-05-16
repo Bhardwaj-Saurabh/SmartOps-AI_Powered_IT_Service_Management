@@ -21,11 +21,16 @@ services:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/smartops-realm.json:ro
     ports:
       - "8081:8080"      # admin console — dev only; remove in any deployed env
+    # Simple TCP-port check via bash /dev/tcp. The Keycloak UBI image has bash
+    # and supports /dev/tcp. Targets the HTTP listener (8080) — once it's
+    # accepting connections the realm is live enough for agents to fetch JWKS.
+    # Generous start_period because first-boot realm import takes ~30s.
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -52,7 +57,7 @@ services:
     command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
     # No host port mapping — internal only.
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:4000/health/liveliness', timeout=2).status==200 else 1)\""]
@@ -129,7 +134,7 @@ services:
       - ../configs/semantic-plane:/app/configs/semantic-plane:ro
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       otel-collector:
         condition: service_healthy
     healthcheck:
@@ -262,7 +267,7 @@ services:
       - "8443:8443"      # dev only — MCP endpoint
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       litellm:
         condition: service_healthy
       sbca:
@@ -377,7 +382,7 @@ services:
       DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       litellm:
         condition: service_healthy
       sbca:
@@ -496,7 +501,7 @@ services:
       DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       litellm:
         condition: service_healthy
       sbca:
@@ -535,7 +540,7 @@ services:
       DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       litellm:
         condition: service_healthy
       sbca:
@@ -573,7 +578,7 @@ services:
       - "8454:8444"      # dev only — orchestrator's A2A endpoint (different host port from intake)
     depends_on:
       keycloak:
-        condition: service_healthy
+        condition: service_started
       sbca:
         condition: service_healthy
       incident-intake-agent:
@@ -614,7 +619,7 @@ services:
       TOPOLOGY_WALKER_URL: http://topology-walker:9003
       DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
     depends_on:
-      keycloak: {condition: service_healthy}
+      keycloak: {condition: service_started}
       litellm: {condition: service_healthy}
       sbca: {condition: service_healthy}
       log-aggregator-connector: {condition: service_healthy}
@@ -646,7 +651,7 @@ services:
       EMBEDDING_SEARCH_URL: http://embedding-search-tool:9002
       DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
     depends_on:
-      keycloak: {condition: service_healthy}
+      keycloak: {condition: service_started}
       litellm: {condition: service_healthy}
       sbca: {condition: service_healthy}
       knowledge-base-connector: {condition: service_healthy}
@@ -676,7 +681,7 @@ services:
     ports:
       - "8464:8444"      # dev only — orchestrator's A2A endpoint
     depends_on:
-      keycloak: {condition: service_healthy}
+      keycloak: {condition: service_started}
       sbca: {condition: service_healthy}
       diagnostic-agent: {condition: service_healthy}
       knowledge-search-agent: {condition: service_healthy}

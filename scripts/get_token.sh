@@ -27,6 +27,8 @@ case "${CLIENT_ID}" in
   agent-communication)           DEFAULT_SECRET="dev-communication-secret-rotate-me" ;;
   agent-sla-monitor)             DEFAULT_SECRET="dev-sla-monitor-secret-rotate-me" ;;
   agent-closure-orchestrator)    DEFAULT_SECRET="dev-closure-orchestrator-secret-rotate-me" ;;
+  agent-resolution-documenter)   DEFAULT_SECRET="dev-resolution-documenter-secret-rotate-me" ;;
+  agent-problem-linker)          DEFAULT_SECRET="dev-problem-linker-secret-rotate-me" ;;
   *)                             DEFAULT_SECRET="" ;;
 esac
 

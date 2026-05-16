@@ -1,0 +1,84 @@
+# Synthetic incident-history corpus. Real impl would query the
+# incident-tracking system; Phase 1 ships representative past incidents
+# the Problem Linker can cluster against.
+
+incidents:
+  - incident_id: INC-H001
+    service_area: network
+    category: vpn
+    affected_service: vpn
+    root_cause: "MTU mismatch after firewall vendor patch"
+    reporter_department: sales
+    closed_at_days_ago: 28
+    similarity_signature: "vpn-mtu-mismatch"
+
+  - incident_id: INC-H002
+    service_area: network
+    category: vpn
+    affected_service: vpn
+    root_cause: "MTU mismatch after firewall vendor patch"
+    reporter_department: engineering
+    closed_at_days_ago: 22
+    similarity_signature: "vpn-mtu-mismatch"
+
+  - incident_id: INC-H003
+    service_area: network
+    category: vpn
+    affected_service: vpn
+    root_cause: "Single-user OS network stack misconfig"
+    reporter_department: marketing
+    closed_at_days_ago: 19
+    similarity_signature: "vpn-misconfig"
+
+  - incident_id: INC-H004
+    service_area: application
+    category: okta-sso
+    affected_service: okta-sso
+    root_cause: "Conditional Access group sync lapsed"
+    reporter_department: finance
+    closed_at_days_ago: 12
+    similarity_signature: "okta-ca-sync"
+
+  - incident_id: INC-H005
+    service_area: application
+    category: okta-sso
+    affected_service: okta-sso
+    root_cause: "Conditional Access group sync lapsed"
+    reporter_department: sales
+    closed_at_days_ago: 9
+    similarity_signature: "okta-ca-sync"
+
+  - incident_id: INC-H006
+    service_area: application
+    category: okta-sso
+    affected_service: okta-sso
+    root_cause: "Conditional Access group sync lapsed"
+    reporter_department: operations
+    closed_at_days_ago: 5
+    similarity_signature: "okta-ca-sync"
+
+  - incident_id: INC-H007
+    service_area: endpoint
+    category: printer
+    affected_service: print-services
+    root_cause: "Spooler queue stuck after firmware push"
+    reporter_department: operations
+    closed_at_days_ago: 14
+    similarity_signature: "print-spooler-stuck"
+
+  - incident_id: INC-H008
+    service_area: application
+    category: salesforce
+    affected_service: salesforce
+    root_cause: "SAML authorization-server URI changed after Okta upgrade"
+    reporter_department: sales
+    closed_at_days_ago: 58
+    similarity_signature: "salesforce-sso-uri"
+
+# Currently-open problem records that incidents can be linked to.
+problems:
+  - problem_id: PRB-001
+    title: "Okta CA group SSO-Eligible sync lapses"
+    similarity_signature: "okta-ca-sync"
+    linked_incidents: ["INC-H004", "INC-H005", "INC-H006"]
+    state: open

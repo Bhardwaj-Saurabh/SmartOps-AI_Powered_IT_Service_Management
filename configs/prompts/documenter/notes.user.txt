@@ -1,0 +1,23 @@
+Incident summary:
+  id: {incident_id}
+  affected_service: {affected_service}
+  service_area / category: {service_area} / {category}
+  symptoms: {symptoms_summary}
+  symptoms_verbatim: {symptoms_verbatim}
+
+Diagnosis:
+  root_cause: {root_cause}
+  cause_type: {cause_type}
+  confidence: {diagnosis_confidence}
+
+Fix:
+  runbook: {runbook_id}
+  what_changed: {what_changed}
+  changed_resources: {changed_resources}
+  rollback_token: {rollback_token}
+
+Verification:
+  fix_verified: {fix_verified}
+  verification_reasoning: {verification_reasoning}
+
+Write the resolution note.

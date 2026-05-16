@@ -1,0 +1,30 @@
+# Business rules for the Resolution Documenter Agent.
+
+# Rule: documentation_template_by_category
+# Picks the structured-note template to use. ``default`` is the fallback.
+documentation_template_by_category:
+  default:                       resolution-note-default
+  vpn:                           resolution-note-network
+  wifi:                          resolution-note-network
+  okta-sso:                      resolution-note-auth
+  salesforce:                    resolution-note-saas
+  workday:                       resolution-note-saas
+  printer:                       resolution-note-endpoint
+
+# Rule: kb_update_policy
+# Whether to update an existing article vs create a new one.
+#   - update_when_effectiveness_above: if a similar article scored well in
+#     historical use, append to it rather than create a new one.
+#   - create_when_no_close_match: similarity threshold below which the agent
+#     creates a new article instead of updating.
+kb_update_policy:
+  update_when_effectiveness_above: 0.75
+  create_when_no_close_match_below: 0.50
+  draft_when_low_confidence_below:  0.40
+
+# Rule: documentation_publishing
+# Whether emitted notes are auto-published to the KB or saved as drafts for
+# human review. Phase 1: drafts. A Phase-2 reviewer agent could promote.
+documentation_publishing:
+  publish_automatically: false
+  draft_retention_days:  30

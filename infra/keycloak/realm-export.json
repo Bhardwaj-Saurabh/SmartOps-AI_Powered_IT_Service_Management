@@ -516,6 +516,50 @@
       ]
     },
     {
+      "clientId": "agent-resolution-documenter",
+      "description": "Resolution Documenter Agent service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-resolution-documenter-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {"name": "audience-self", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-resolution-documenter", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-litellm", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "litellm-gateway", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-sbca", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-sbca", "id.token.claim": "false", "access.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "agent-problem-linker",
+      "description": "Problem Linker Agent service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-problem-linker-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {"name": "audience-self", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-problem-linker", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-litellm", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "litellm-gateway", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-sbca", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-sbca", "id.token.claim": "false", "access.token.claim": "true"}}
+      ]
+    },
+    {
       "clientId": "agent-closure-orchestrator",
       "description": "Closure Workflow Orchestrator (third service-layer agent) service account",
       "enabled": true,
@@ -536,7 +580,11 @@
         {"name": "audience-communication", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
          "config": {"included.client.audience": "agent-communication", "id.token.claim": "false", "access.token.claim": "true"}},
         {"name": "audience-sla-monitor", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
-         "config": {"included.client.audience": "agent-sla-monitor", "id.token.claim": "false", "access.token.claim": "true"}}
+         "config": {"included.client.audience": "agent-sla-monitor", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-resolution-documenter", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-resolution-documenter", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-problem-linker", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-problem-linker", "id.token.claim": "false", "access.token.claim": "true"}}
       ]
     },
     {
@@ -657,6 +705,18 @@
       "username": "service-account-agent-closure-orchestrator",
       "enabled": true,
       "serviceAccountClientId": "agent-closure-orchestrator",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-resolution-documenter",
+      "enabled": true,
+      "serviceAccountClientId": "agent-resolution-documenter",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-problem-linker",
+      "enabled": true,
+      "serviceAccountClientId": "agent-problem-linker",
       "realmRoles": ["agent"]
     }
   ]

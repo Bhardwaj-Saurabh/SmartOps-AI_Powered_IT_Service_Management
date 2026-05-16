@@ -70,6 +70,17 @@ End-to-end reference implementation of the **DI AI Framework** built around an I
 - `configs/semantic-plane/sla-rules.yaml` — per-(priority, tier) response/resolve targets; per-region business hours; pause conditions; breach-warning percentages.
 - `scripts/demo_closure.sh` — submits a resolved-incident payload; outputs the dispatch + SLA snapshot artifacts.
 
+**Stage 5b — Closure complete: Resolution Documenter + Problem Linker. Project's full 12-tactical-agent set is now on `main`.**:
+- `services/resolution-documenter-agent/` — tactical agent #11. Anthropic prompt chaining. LLM composes a structured resolution-note JSON; SBCA policy decides create-vs-update-vs-draft against the KB; document-formatter renders to markdown; knowledge-base-writer persists (drafts by default).
+- `services/problem-linker-agent/` — tactical agent #12. Detects recurrence patterns: incident-history-connector pulls past incidents, clustering-tool groups by similarity signature, SBCA gates threshold + eligibility + min-cluster-cohesion, LLM assesses whether the cluster is systemic. Outputs: `linked` (to existing problem) / `new_problem_recommended` / `below_threshold` / `not_eligible` / `no_history`.
+- `tools/document-formatter/` + `tools/knowledge-base-writer/` — Documenter sidecars (markdown rendering + synthetic KB store with `/articles` inspection).
+- `tools/incident-history-connector/` + `tools/clustering-tool/` — Problem-Linker sidecars (metadata-filterable history + signature-grouping clusterer).
+- `configs/semantic-plane/documentation-rules.yaml` — template-by-category, KB update policy thresholds, publishing toggle (drafts by default).
+- `configs/semantic-plane/problem-linker-rules.yaml` — recurrence threshold by service_area (`security` is more aggressive), cluster cohesion floor, eligibility allow-list.
+- Closure Orchestrator's `chain:` grows 2 → 4 entries — adding Documenter and Problem Linker is a config-only change.
+
+**The PRD's 12 tactical agents + 3 sub-process orchestrators are all on `main`.** Stage 6 will add the I2R Primary Orchestrator that composes Triage → Resolution → Closure end-to-end.
+
 ## Quickstart
 
 ```bash

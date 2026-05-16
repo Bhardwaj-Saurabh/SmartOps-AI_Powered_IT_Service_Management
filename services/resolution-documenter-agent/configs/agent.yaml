@@ -1,0 +1,62 @@
+name: resolution-documenter-agent
+version: 0.1.0
+pattern: chain                       # Anthropic prompt chaining
+pattern_kind: workflow
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.15
+  max_tokens: 1024
+
+oidc:
+  client_id: agent-resolution-documenter
+  audience: agent-resolution-documenter
+
+a2a:
+  port: 8444
+  skills:
+    - id: document_resolution
+      name: Document resolution
+      description: Generate a structured resolution note + create/update a KB article (draft)
+
+mcp:
+  enabled: false                     # always orchestrated per PRD
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  document_formatter:    {url: "${DOCUMENT_FORMATTER_URL:-http://document-formatter:9001}",     timeout_seconds: 5}
+  knowledge_base_writer: {url: "${KNOWLEDGE_BASE_WRITER_URL:-http://knowledge-base-writer:9002}", timeout_seconds: 5}
+  knowledge_base:        {url: "${KNOWLEDGE_BASE_URL:-http://knowledge-base-connector:9001}",    timeout_seconds: 5}
+
+prompts:
+  notes_system_path: /app/configs/prompts/documenter/notes.system.txt
+  notes_user_path:   /app/configs/prompts/documenter/notes.user.txt
+
+semantic_queries:
+  documentation_template_by_category: "documentation_template_by_category"
+  kb_update_policy:                   "kb_update_policy"
+  documentation_publishing:           "documentation_publishing"
+
+audit:
+  cat_fields: [llm_prompt, llm_response, template_id, rendered_markdown, kb_decision]
+  pst_fields: [duration_ms, decision, tokens_used, kb_article_id]
+
+kpis:
+  business:
+    - notes_published_count
+    - new_articles_created_count
+    - articles_updated_count
+    - drafts_created_count
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - sidecar_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

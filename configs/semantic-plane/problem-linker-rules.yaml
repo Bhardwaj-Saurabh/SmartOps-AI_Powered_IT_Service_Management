@@ -1,0 +1,29 @@
+# Business rules for the Problem Linker Agent.
+
+# Rule: problem_creation_threshold
+# The minimum recurring incidents (in the window) needed before the agent
+# recommends creating a new problem record.
+problem_creation_threshold:
+  default:    3        # incidents per window for a new problem
+  window_days: 30
+  by_service_area:
+    security: 2        # be more aggressive about flagging security patterns
+
+# Rule: cluster_min_similarity
+# When grouping incidents into a candidate problem cluster, drop members
+# whose similarity to the centroid falls below this. (Phase 1 uses a
+# synthetic clustering tool; this rule still controls inclusion.)
+cluster_min_similarity:
+  default: 0.65
+
+# Rule: problem_link_categories
+# Which (service_area, category) buckets are eligible for automatic
+# problem-record creation. Others always require a human.
+problem_link_categories:
+  eligible:
+    - {service_area: network,     category: vpn}
+    - {service_area: application, category: okta-sso}
+    - {service_area: application, category: salesforce}
+    - {service_area: application, category: workday}
+    - {service_area: endpoint,    category: printer}
+  default: false       # never auto-create for an unlisted category

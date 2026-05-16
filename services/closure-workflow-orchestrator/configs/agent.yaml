@@ -1,5 +1,5 @@
 name: closure-workflow-orchestrator
-version: 0.1.0                       # Stage 5a — Communication + SLA chained
+version: 0.2.0                       # Stage 5b — chain now Notify + SLA + Document + Link
 pattern: chain
 pattern_kind: workflow
 
@@ -12,9 +12,9 @@ a2a:
   skills:
     - id: close_incident
       name: Close incident
-      description: Notify stakeholders + record SLA snapshot (Stage 5a); + document + link to problem in Stage 5b
+      description: Notify + SLA snapshot + write resolution docs + link to problem records
 
-# Stage 5a chain. Stage 5b appends resolution_documenter + problem_linker.
+# Full 4-step Closure chain.
 chain:
   - capability: send_status_update
     skill: send_status_update
@@ -26,7 +26,7 @@ chain:
       diagnosis:      "input.diagnosis"
       fix_result:     "input.fix_result"
       verification:   "input.verification"
-      trigger:        "input.trigger"        # caller decides (resolution / escalation / state_change)
+      trigger:        "input.trigger"
       current_state:  "input.current_state"
 
   - capability: calculate_sla_status
@@ -39,6 +39,24 @@ chain:
       region:             "input.region"
       started_at_epoch:   "input.started_at_epoch"
       state_transitions:  "input.state_transitions"
+
+  - capability: document_resolution
+    skill: document_resolution
+    step_label: closure.document
+    compose_inputs:
+      incident:       "input.incident"
+      classification: "input.classification"
+      diagnosis:      "input.diagnosis"
+      fix_result:     "input.fix_result"
+      verification:   "input.verification"
+
+  - capability: link_to_problem
+    skill: link_to_problem
+    step_label: closure.problem_link
+    compose_inputs:
+      incident:       "input.incident"
+      classification: "input.classification"
+      diagnosis:      "input.diagnosis"
 
 capability_registry:
   register_on_startup: true

@@ -1,0 +1,14 @@
+Current incident:
+  id: {incident_id}
+  service_area / category: {service_area} / {category}
+  root_cause: {root_cause}
+  symptoms: {symptoms_summary}
+
+Cluster of recent similar incidents (JSON):
+{cluster_json}
+
+Threshold from policy:
+  minimum_incidents: {threshold} (in {window_days}-day window)
+  cluster_min_similarity: {min_similarity}
+
+Assess the cluster.

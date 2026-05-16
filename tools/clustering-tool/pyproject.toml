@@ -1,0 +1,13 @@
+[project]
+name = "tool-clustering-tool"
+version = "0.1.0"
+description = "Groups incidents by similarity signature. Phase 1 uses string-equality; Phase 2 swaps to embedding-based."
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "pydantic>=2.9"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clustering_tool"]

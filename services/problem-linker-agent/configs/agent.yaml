@@ -1,0 +1,60 @@
+name: problem-linker-agent
+version: 0.1.0
+pattern: chain                       # Anthropic chain (one LLM call for systemic-pattern assessment)
+pattern_kind: workflow
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.1
+  max_tokens: 512
+
+oidc:
+  client_id: agent-problem-linker
+  audience: agent-problem-linker
+
+a2a:
+  port: 8444
+  skills:
+    - id: link_to_problem
+      name: Link to problem record
+      description: Detect recurrence patterns; link to or recommend a problem record
+
+mcp:
+  enabled: false                     # always orchestrated per PRD
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  incident_history: {url: "${INCIDENT_HISTORY_URL:-http://incident-history-connector:9001}", timeout_seconds: 5}
+  clustering:       {url: "${CLUSTERING_URL:-http://clustering-tool:9002}",                  timeout_seconds: 5}
+
+prompts:
+  assess_system_path: /app/configs/prompts/problem_linker/assess.system.txt
+  assess_user_path:   /app/configs/prompts/problem_linker/assess.user.txt
+
+semantic_queries:
+  problem_creation_threshold: "problem_creation_threshold"
+  cluster_min_similarity:     "cluster_min_similarity"
+  problem_link_categories:    "problem_link_categories"
+
+audit:
+  cat_fields: [llm_prompt, llm_response, history_query, clusters, recommendation]
+  pst_fields: [duration_ms, cluster_count, max_cluster_size, recommendation, linked_to_problem_id]
+
+kpis:
+  business:
+    - problem_links_created_count
+    - new_problem_recommendations_count
+    - patterns_below_threshold_count
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - sidecar_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

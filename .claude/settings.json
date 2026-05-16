@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(uv:*)",
+      "Bash(uvx:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(mypy:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker ps)",
+      "Bash(docker logs:*)",
+      "Bash(docker inspect:*)",
+      "Bash(curl http://localhost:*)",
+      "Bash(curl -sS http://localhost:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(cat configs/*)",
+      "Bash(cat infra/*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)"
+    ],
+    "ask": [
+      "Bash(docker compose down:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker rm:*)",
+      "Bash(rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ],
+    "deny": [
+      "Bash(pip install openai*)",
+      "Bash(pip install anthropic*)",
+      "Bash(pip install azure-ai-inference*)",
+      "Bash(pip install azure-openai*)",
+      "Bash(uv add openai*)",
+      "Bash(uv add anthropic*)",
+      "Bash(uv add azure-ai-inference*)",
+      "Bash(uv add azure-openai*)",
+      "Bash(uv add semantic-kernel*)",
+      "Bash(uv add autogen*)",
+      "Bash(docker pull ghcr.io/berriai/litellm:latest)",
+      "Bash(docker pull berriai/litellm:latest)",
+      "Bash(docker pull ghcr.io/berriai/litellm:main)",
+      "Bash(docker run *berriai/litellm:latest*)",
+      "Bash(docker run *berriai/litellm:main*)",
+      "Read(.env.local)",
+      "Read(.env)",
+      "Read(**/secrets/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/check-forbidden-patterns.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

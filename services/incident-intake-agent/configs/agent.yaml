@@ -1,0 +1,77 @@
+name: incident-intake-agent
+version: 0.1.0
+pattern: chain                         # Anthropic "Building Effective Agents"
+pattern_kind: workflow                 # deterministic chain, not LLM-driven control
+
+model:
+  alias: incident-intake-chat          # resolved by LiteLLM to Azure Foundry deployment
+  temperature: 0.1
+  max_tokens: 1024
+
+embedding:
+  alias: di-embedding
+  vector_size: 3072
+  qdrant_collection: historical_incidents
+
+oidc:
+  client_id: agent-incident-intake
+  audience: agent-incident-intake
+
+a2a:
+  port: 8444
+  skills:
+    - id: submit_incident
+      name: Submit incident
+      description: Accept raw incident text from any channel and emit a structured record
+    - id: check_duplicate
+      name: Check duplicate
+      description: Return the nearest historical incident and similarity score
+
+mcp:
+  enabled: true
+  port: 8443
+  tools:
+    - submit_incident
+    - check_duplicate
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  email_parser:    {url: "${EMAIL_PARSER_URL:-http://email-parser:9001}",       timeout_seconds: 5}
+  slack_connector: {url: "${SLACK_CONNECTOR_URL:-http://slack-connector:9002}", timeout_seconds: 5}
+  form_normaliser: {url: "${FORM_NORMALISER_URL:-http://form-normaliser:9003}", timeout_seconds: 5}
+
+prompts:
+  extract_system_path: /app/configs/prompts/incident-intake/extract.system.txt
+  extract_user_path:   /app/configs/prompts/incident-intake/extract.user.txt
+
+semantic_queries:
+  required_fields:      "required_fields"
+  duplicate_threshold:  "duplicate_threshold"
+  vip_departments:      "vip_departments"
+  clarification_template: "clarification_template"
+
+audit:
+  cat_fields: [reporter, full_content, decision_chain, llm_prompt, llm_response]
+  pst_fields: [duration_ms, token_count, error_class, step_failure_count, channel]
+
+kpis:
+  business:
+    - emit_count                       # count of incidents emitted by state
+    - duplicate_detection_count
+    - completeness_rate                # 1.0 - clarification_count / emit_count
+    - vip_incident_count
+    - time_to_emit_ms
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - sidecar_latency_ms
+    - error_rate
+    - step_failure_count
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail              # NEVER fallback — §5 MUST

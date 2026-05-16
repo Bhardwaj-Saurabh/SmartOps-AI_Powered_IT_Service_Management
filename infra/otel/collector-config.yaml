@@ -1,0 +1,138 @@
+# OpenTelemetry Collector — DI AI Framework §6.3 dual-pipeline split.
+#
+# Every span/log/metric arrives with attribute `audit.type` ∈ {confidential, platform}.
+# Two parallel pipelines:
+#
+#   CAT  (confidential audit trail) — full content, encrypted store, 7-year retention,
+#                                     access RBAC + MFA. Drops nothing.
+#   PST  (platform support trail)   — anonymised, 90-day retention, ops/dev access.
+#                                     The redact processor strips sensitive attrs.
+#
+# Exporters are CONFIGURABLE (§6.4) — swap file sinks for Elastic / vault later
+# without touching agent code.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+  # Add resource-level metadata to every signal.
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${env:DEPLOY_ENV:-local}
+        action: upsert
+      - key: framework
+        value: di-ai
+        action: upsert
+
+  # Route by audit.type into two named pipelines.
+  routing/audit:
+    from_attribute: audit.type
+    default_pipelines: [traces/pst]            # if missing → treat as platform (PII-safe default)
+    table:
+      - value: confidential
+        pipelines: [traces/cat]
+      - value: platform
+        pipelines: [traces/pst]
+
+  routing/audit_logs:
+    from_attribute: audit.type
+    default_pipelines: [logs/pst]
+    table:
+      - value: confidential
+        pipelines: [logs/cat]
+      - value: platform
+        pipelines: [logs/pst]
+
+  # Strip sensitive attributes from anything going to PST.
+  # CAT keeps them. The list is conservative — extend per agent if needed.
+  attributes/redact_pst:
+    actions:
+      - key: incident.reporter
+        action: delete
+      - key: incident.full_content
+        action: delete
+      - key: message.body
+        action: delete
+      - key: user.email
+        action: delete
+      - key: tool.payload
+        action: delete
+
+exporters:
+  # CAT — file sink for Phase 1. In Phase 2 this becomes an encrypted-vault exporter.
+  file/cat_traces:
+    path: /var/log/cat/traces.jsonl
+    rotation:
+      max_megabytes: 100
+      max_days: 30
+      max_backups: 5
+  file/cat_logs:
+    path: /var/log/cat/logs.jsonl
+    rotation:
+      max_megabytes: 100
+      max_days: 30
+      max_backups: 5
+
+  # PST — file sink for Phase 1. In Phase 2 this becomes Elasticsearch / Loki.
+  file/pst_traces:
+    path: /var/log/pst/traces.jsonl
+    rotation:
+      max_megabytes: 100
+      max_days: 7
+      max_backups: 3
+  file/pst_logs:
+    path: /var/log/pst/logs.jsonl
+    rotation:
+      max_megabytes: 100
+      max_days: 7
+      max_backups: 3
+
+  # Phase-1 stdout exporter for inspection during `docker compose logs -f otel-collector`.
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, resource, routing/audit]
+      exporters: [debug]
+    traces/cat:
+      receivers: [otlp]
+      processors: [resource]
+      exporters: [file/cat_traces]
+    traces/pst:
+      receivers: [otlp]
+      processors: [resource, attributes/redact_pst]
+      exporters: [file/pst_traces]
+    logs:
+      receivers: [otlp]
+      processors: [batch, resource, routing/audit_logs]
+      exporters: [debug]
+    logs/cat:
+      receivers: [otlp]
+      processors: [resource]
+      exporters: [file/cat_logs]
+    logs/pst:
+      receivers: [otlp]
+      processors: [resource, attributes/redact_pst]
+      exporters: [file/pst_logs]
+    metrics:
+      receivers: [otlp]
+      processors: [batch, resource]
+      exporters: [debug]

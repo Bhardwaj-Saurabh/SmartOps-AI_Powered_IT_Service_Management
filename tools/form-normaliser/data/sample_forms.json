@@ -1,0 +1,35 @@
+[
+  {
+    "case": "portal_okta_outage",
+    "schema_id": "smartops_portal_v1",
+    "payload": {
+      "reporter_email": "anjali.varma@example.com",
+      "title": "Okta SSO redirect loop",
+      "description": "When I log into Okta and click on the Workday tile, the page redirects me back to Okta in a loop. I cleared cookies and tried Chrome and Edge — same behaviour. Affects all my SaaS apps that use Workday-SSO. Started ~30 min ago.",
+      "service": "okta-sso",
+      "urgency": "high",
+      "submitted_at": "2026-05-12T09:48:00Z"
+    }
+  },
+  {
+    "case": "legacy_printer",
+    "schema_id": "legacy_intranet",
+    "payload": {
+      "Email": "tom.gardner@example.com",
+      "Title": "Floor 4 colour printer offline",
+      "Description": "The HP colour printer 4F-CP01 shows 'offline' for everyone on the floor. We need it for client packets today.",
+      "Application": "print-services",
+      "Severity": "medium",
+      "Date": "2026-05-12T10:21:00Z"
+    }
+  },
+  {
+    "case": "portal_missing_body",
+    "schema_id": "smartops_portal_v1",
+    "payload": {
+      "reporter_email": "no.description@example.com",
+      "title": "something broke",
+      "service": "unknown"
+    }
+  }
+]

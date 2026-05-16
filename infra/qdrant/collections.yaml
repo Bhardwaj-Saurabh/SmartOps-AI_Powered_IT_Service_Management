@@ -1,0 +1,31 @@
+# Qdrant collection definitions. Read by scripts/seed_qdrant.py at bootstrap.
+# Vector size 3072 matches Azure Foundry text-embedding-3-large.
+# If you swap to text-embedding-3-small, change to 1536.
+
+collections:
+  - name: historical_incidents
+    description: Closed incidents for duplicate detection + similarity search
+    vectors:
+      size: 3072
+      distance: Cosine
+    payload_schema:
+      incident_id: keyword
+      title: text
+      service: keyword
+      category: keyword
+      created_at: integer
+      reporter_department: keyword
+      resolution_summary: text
+
+  - name: knowledge_articles
+    description: Knowledge base articles for the Knowledge Search Agent (Phase 2)
+    vectors:
+      size: 3072
+      distance: Cosine
+    payload_schema:
+      article_id: keyword
+      title: text
+      category: keyword
+      service: keyword
+      updated_at: integer
+      effectiveness_score: float

@@ -1,0 +1,81 @@
+# LiteLLM AI Gateway — DI AI Framework reference deployment.
+#
+# Pinned to v1.83.10-stable in docker-compose.yaml per CVE-2026-42208 (CISA KEV).
+# Hardening checklist (see CLAUDE.md "LiteLLM Hardening"):
+#   * non-root container user (set in compose)
+#   * read-only rootfs (set in compose)
+#   * no host port publish (set in compose)
+#   * explicit allowed_routes
+#   * dangerous endpoints disabled
+#   * Keycloak JWT auth, no virtual keys
+#   * per-agent metering on the `azp` claim
+
+model_list:
+  # ─── Chat models ───────────────────────────────────────────────
+  - model_name: incident-intake-chat
+    litellm_params:
+      model: azure/${AZURE_FOUNDRY_CHAT_DEPLOYMENT}
+      api_base: os.environ/AZURE_API_BASE
+      api_key: os.environ/AZURE_API_KEY
+      api_version: os.environ/AZURE_API_VERSION
+      timeout: 60
+
+  # ─── Embedding models ─────────────────────────────────────────
+  - model_name: di-embedding
+    litellm_params:
+      model: azure/${AZURE_FOUNDRY_EMBEDDING_DEPLOYMENT}
+      api_base: os.environ/AZURE_API_BASE
+      api_key: os.environ/AZURE_API_KEY
+      api_version: os.environ/AZURE_API_VERSION
+      mode: embedding
+
+# ─── Routing strategy ─────────────────────────────────────────────
+router_settings:
+  routing_strategy: simple-shuffle
+  num_retries: 2
+  timeout: 60
+  fallbacks:
+    - {"incident-intake-chat": []}      # no cross-model fallback in dev
+
+# ─── Auth + governance ────────────────────────────────────────────
+general_settings:
+  # Keycloak JWT verification on every gateway call.
+  # Replaces LiteLLM virtual-keys entirely. Per-agent metering keys on `azp`.
+  enable_jwt_auth: true
+  litellm_jwtauth:
+    jwks_url: http://keycloak:8080/realms/smartops/protocol/openid-connect/certs
+    audience: litellm-gateway
+    # Map JWT claims to LiteLLM concepts:
+    team_id_jwt_field: azp                # per-agent team for token metering
+    user_id_jwt_field: sub
+    user_id_upsert: true
+    admin_jwt_scope: gateway-admin
+    public_key_ttl: 600
+
+  # Lock down endpoints. Anything not in this list returns 404.
+  # See CLAUDE.md "LiteLLM Hardening" for why these specific exclusions matter.
+  allowed_routes:
+    - "/v1/chat/completions"
+    - "/v1/embeddings"
+    - "/v1/models"
+    - "/health/liveliness"
+    - "/health/readiness"
+  ui_access_mode: admin_only
+  disable_spend_logs_writes: false
+  # The following endpoints are KNOWN-VULNERABLE in older versions and have no
+  # business use case in this project — refuse them even if a future image
+  # surface re-exposes them.
+  disable_routes:
+    - "/prompts/test"                     # GHSA-xqmj-j6mv-4862 (SSTI)
+    - "/guardrails/test_custom_code"      # GHSA-wxxx-gvqv-xp7p (sandbox escape)
+    - "/mcp/stdio/test"                   # CVE-2026-30623
+    - "/config/update"                    # GHSA-jjhc-v7c2-5hh6 (priv escalation)
+
+  # Token usage metering — emitted as OTEL metrics. The dashboards group by
+  # the `team_id` (= agent `azp` claim) to give per-agent visibility.
+  store_model_in_db: false
+  track_cost_per_model: true
+
+  # Trace propagation — preserves correlation across the agent → gateway → provider hop.
+  forward_traceparent_to_llm_provider: true
+  forward_client_headers_to_llm_api: false   # do NOT leak X-Correlation-Id to provider

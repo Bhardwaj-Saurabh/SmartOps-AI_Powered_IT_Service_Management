@@ -1,0 +1,9 @@
+Channel: {channel}
+Received at: {received_at}
+
+Raw report:
+---
+{raw_text}
+---
+
+Extract the incident structure.

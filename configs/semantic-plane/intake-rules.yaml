@@ -1,0 +1,53 @@
+# Business rules for the Incident Intake Agent.
+# Served by SBCA. Queried by the agent at runtime via libs/semantic_client.
+# Edit + reload (POST /admin/reload on SBCA) — no code redeploy.
+
+# Rule: required_fields
+# Returned by SBCA when the Incident Intake Agent's step 8 asks
+# "What fields are required for incident intake in [service area]?"
+required_fields:
+  default:
+    must:
+      - reporter
+      - affected_service
+      - symptoms
+      - reported_at
+    should:
+      - urgency
+      - impact_description
+  # Per-service-area overrides
+  by_service_area:
+    network:
+      must:
+        - reporter
+        - affected_service
+        - symptoms
+        - reported_at
+        - error_messages
+    security:
+      must:
+        - reporter
+        - affected_service
+        - symptoms
+        - reported_at
+        - data_classification
+
+# Rule: duplicate_threshold
+# Vector similarity >= threshold within `window_hours` → flag duplicate (step 5).
+duplicate_threshold:
+  similarity: 0.92
+  window_hours: 24
+
+# Rule: vip_departments
+# Used by step 7 (reporter enrichment) to flag VIP incidents.
+vip_departments:
+  - executive
+  - board
+  - finance-c-suite
+
+# Rule: clarification_template
+# Step 9 — if required fields are missing, ask back through A2A.
+clarification_template: |
+  We need a few more details to triage this incident properly:
+  {missing_fields_bulleted}
+  Please reply with these so we can route correctly.

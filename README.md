@@ -1,0 +1,84 @@
+# SmartOps — DI AI Framework Reference Implementation
+
+End-to-end reference implementation of the **DI AI Framework** built around an IT Service Management domain. Driven by two binding documents:
+
+- [docs/DI_AI_FRAMEWORK.md](docs/DI_AI_FRAMEWORK.md) — framework spec (MUST/SHOULD/COULD)
+- [docs/PRD.md](docs/PRD.md) — the SmartOps application (12 tactical agents + 3 sub-process orchestrators + 1 primary orchestrator over Incident-to-Resolution)
+- [docs/architecture.md](docs/architecture.md) — Incident Intake Agent (build #1) architecture + framework gap-closure
+
+## What's built so far
+
+**Stage 1 — shared libraries** (`libs/`):
+`di_framework_core`, `config_loader`, `observability`, `a2a_server` (spec-native Google A2A — no wrappers), `a2a_client`, `gateway_client` (LiteLLM / OpenAI-shape), `semantic_client` (A2A wrapper to SBCA).
+
+**Stage 2 — first runnable stack**:
+- `services/incident-intake-agent/` — tactical agent, Anthropic prompt-chaining pattern, 12-step workflow
+- `services/strategic-business-context-agent/` — SBCA stub (rule queries + capability registry)
+- `tools/{email-parser,slack-connector,form-normaliser}/` — three sidecar tools
+- `infra/` — Docker Compose, LiteLLM v1.83.10-stable (hardened per CVE-2026-42208), Keycloak with `smartops` realm, OTEL Collector with CAT/PST split, Qdrant, Redis
+- `configs/semantic-plane/*.yaml` — versioned business rules
+- `scripts/` — token fetch, Qdrant seed, A2A demo
+
+## Quickstart
+
+```bash
+# 1. Copy and edit env. You need an Azure AI Foundry chat + embedding deployment.
+cp infra/.env.local.example infra/.env.local
+$EDITOR infra/.env.local
+
+# 2. Boot the stack
+docker compose --env-file infra/.env.local -f infra/docker-compose.yaml up -d
+
+# 3. Wait for everything to be healthy (Keycloak takes ~30s for the first realm import)
+docker compose -f infra/docker-compose.yaml ps
+
+# 4. Seed Qdrant with synthetic historical incidents (so duplicate detection has something to match)
+export GATEWAY_TOKEN="$(scripts/get_token.sh agent-incident-intake)"
+python scripts/seed_qdrant.py
+
+# 5. Submit a synthetic incident via A2A
+scripts/demo_submit_incident.sh
+```
+
+The response is an A2A `Task` JSON. On the happy path you'll see `state: "completed"` with a structured incident artifact. The `tests/data/` folder has more sample payloads — swap them into `scripts/demo_submit_incident.sh` to exercise the duplicate branch (use `near_duplicate_vpn` after seeding) and the clarification branch (use `printer_jam_vague`).
+
+## Inspecting the dual audit trail
+
+```bash
+# Confidential (full content, encrypted-at-rest in real deployments):
+docker compose -f infra/docker-compose.yaml exec otel-collector tail -f /var/log/cat/traces.jsonl
+
+# Platform (anonymised, ops-focused):
+docker compose -f infra/docker-compose.yaml exec otel-collector tail -f /var/log/pst/traces.jsonl
+```
+
+Every span is tagged `audit.type ∈ {confidential, platform}`. The OTEL Collector's routing processor sends them down separate pipelines.
+
+## Running tests
+
+```bash
+uv sync
+uv run pytest services/incident-intake-agent/tests
+```
+
+Tests run offline — they stub LiteLLM/SBCA/Qdrant via mocks. Covers:
+- Happy path: full 12-step chain emits `state=new`
+- Duplicate short-circuit: vector similarity ≥ SBCA threshold → `state=duplicate`
+- Missing required fields → `state=needs_clarification` mapped to A2A `input-required`
+- SBCA failure → `SemanticPlaneError` (no hardcoded fallback)
+- DI envelope round-trips through `Message.metadata.di.*`
+- Agent Card skills match config
+
+## Compliance checks
+
+Inside Claude Code, run `/compliance-check` to apply the framework §12.1 verdict formula (`FAIL_COUNT ≥ 1 OR WARN_COUNT ≥ 3 → FAIL`) against the working tree. The PostToolUse hook in `.claude/hooks/` already blocks forbidden imports and bad LiteLLM tags at edit time.
+
+## What's next
+
+- Stage 3: Triage Workflow Orchestrator + Classification Agent + Priority Scorer + Routing Agent
+- Stage 4: Resolution Workflow Orchestrator + Diagnostic / Knowledge Search / Automated Fix / Verification agents
+- Stage 5: Closure Workflow + Communication / SLA Monitor / Resolution Documenter / Problem Linker
+- Stage 6: I2R Primary Orchestrator
+- Stage 7: Full Strategic Business Context Agent (replaces the stub)
+
+Each stage delivers standalone value per the framework's phased-adoption roadmap (§14).

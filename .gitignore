@@ -8,3 +8,16 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Generated audit stores (created at runtime by OTEL collector)
+infra/otel/cat-store/
+infra/otel/pst-store/
+
+# IDE
+.idea/
+.vscode/

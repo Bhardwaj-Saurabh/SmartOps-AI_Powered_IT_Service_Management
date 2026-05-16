@@ -1,0 +1,26 @@
+{
+  "jsonrpc": "2.0",
+  "id": "demo-1",
+  "method": "message/send",
+  "params": {
+    "message": {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "data",
+          "data": {
+            "channel": "email",
+            "email_raw": "From: priya.rao@example.sales\nTo: helpdesk@example.com\nSubject: URGENT: VPN keeps disconnecting every 2 minutes\nDate: Tue, 12 May 2026 09:14:32 +0000\n\nHi team,\nI've been completely unable to work this morning. The corporate VPN drops every couple of minutes and I have to reconnect. This started around 8:50 AM. I'm on Windows 11, using the Cisco AnyConnect client v4.10.\n"
+          }
+        }
+      ],
+      "metadata": {
+        "di": {
+          "capability": "submit_incident",
+          "process": "i2r",
+          "step": "triage.intake"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,253 @@
+# SmartOps DI AI Framework — local Compose stack.
+#
+# Boot: `docker compose -f infra/docker-compose.yaml up -d`
+# Single internal network. No service exposes its primary port to the host
+# unless it's a debug/dev surface (Keycloak admin, Qdrant UI). LiteLLM is
+# strictly internal — see CLAUDE.md "LiteLLM Hardening".
+#
+# Resource limits are conservative; bump on a beefier host if needed.
+services:
+
+  # ───────────────────── platform services ─────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin-rotate-me}
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_PORT: "8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/smartops-realm.json:ro
+    ports:
+      - "8081:8080"      # admin console — dev only; remove in any deployed env
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  litellm:
+    # CVE-2026-42208 (CISA KEV) requires v1.83.7+; pinned to v1.83.10-stable.
+    # NEVER bump to :latest or :main — hook blocks it. See CLAUDE.md.
+    image: ${LITELLM_IMAGE:-ghcr.io/berriai/litellm:v1.83.10-stable}
+    user: "65532:65532"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/nonroot/.cache
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      LITELLM_MODE: PRODUCTION
+      # Azure Foundry credentials — never exposed to agent containers
+      AZURE_API_BASE: ${AZURE_FOUNDRY_ENDPOINT}
+      AZURE_API_KEY: ${AZURE_FOUNDRY_API_KEY}
+      AZURE_API_VERSION: ${AZURE_FOUNDRY_API_VERSION:-2024-10-21}
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    # No host port mapping — internal only.
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:4000/health/liveliness', timeout=2).status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    volumes:
+      - qdrant-data:/qdrant/storage
+    ports:
+      - "6333:6333"      # REST — dev only, remove in deployed env
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./otel/collector-config.yaml:/etc/otel/config.yaml:ro
+      - cat-store:/var/log/cat
+      - pst-store:/var/log/pst
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:13133/ >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ───────────────────── DI semantic plane ─────────────────────
+  sbca:
+    build:
+      context: ..
+      dockerfile: services/strategic-business-context-agent/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: strategic-business-context-agent
+      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/smartops
+      OIDC_AUDIENCE: agent-sbca
+      SBCA_RULES_DIR: /app/configs/semantic-plane
+      DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
+    volumes:
+      - ../configs/semantic-plane:/app/configs/semantic-plane:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8444/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: "0.5"
+
+  # ───────────────────── tool sidecars ─────────────────────────
+  email-parser:
+    build:
+      context: ..
+      dockerfile: tools/email-parser/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-email-parser
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9001/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+
+  slack-connector:
+    build:
+      context: ..
+      dockerfile: tools/slack-connector/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-slack-connector
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9002/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+
+  form-normaliser:
+    build:
+      context: ..
+      dockerfile: tools/form-normaliser/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: tool-form-normaliser
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:9003/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+
+  # ───────────────────── tactical agent #1 ─────────────────────
+  incident-intake-agent:
+    build:
+      context: ..
+      dockerfile: services/incident-intake-agent/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: incident-intake-agent
+      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/smartops
+      OIDC_CLIENT_ID: agent-incident-intake
+      OIDC_CLIENT_SECRET: ${INCIDENT_INTAKE_CLIENT_SECRET:-bootstrap-me}
+      OIDC_AUDIENCE: agent-incident-intake
+      AI_GATEWAY_URL: http://litellm:4000
+      SBCA_URL: http://sbca:8444
+      QDRANT_URL: http://qdrant:6333
+      EMAIL_PARSER_URL: http://email-parser:9001
+      SLACK_CONNECTOR_URL: http://slack-connector:9002
+      FORM_NORMALISER_URL: http://form-normaliser:9003
+      DEV_ALLOW_UNVERIFIED_JWT: "${DEV_ALLOW_UNVERIFIED_JWT:-false}"
+    ports:
+      - "8444:8444"      # dev only — A2A endpoint
+      - "8443:8443"      # dev only — MCP endpoint
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      litellm:
+        condition: service_healthy
+      sbca:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      email-parser:
+        condition: service_healthy
+      slack-connector:
+        condition: service_healthy
+      form-normaliser:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8444/health', timeout=2).status==200 else 1)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: "1.0"
+
+volumes:
+  qdrant-data:
+  redis-data:
+  cat-store:
+  pst-store:

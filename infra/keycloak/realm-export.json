@@ -1,0 +1,145 @@
+{
+  "realm": "smartops",
+  "enabled": true,
+  "displayName": "SmartOps DI AI Framework",
+  "accessTokenLifespan": 1800,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 5,
+  "roles": {
+    "realm": [
+      {
+        "name": "agent",
+        "description": "Granted to every agent service account",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "smartops"
+      },
+      {
+        "name": "gateway-admin",
+        "description": "Admin operations on LiteLLM gateway",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "smartops"
+      }
+    ]
+  },
+  "scopeMappings": [],
+  "clients": [
+    {
+      "clientId": "agent-incident-intake",
+      "description": "Incident Intake Agent service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-incident-intake-secret-rotate-me",
+      "redirectUris": [],
+      "webOrigins": [],
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "frontchannelLogout": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "1800",
+        "client.session.idle.timeout": "1800"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access"],
+      "protocolMappers": [
+        {
+          "name": "audience-self",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "agent-incident-intake",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-litellm",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "litellm-gateway",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-sbca",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "agent-sbca",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "agent-sbca",
+      "description": "Strategic Business Context Agent service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-sbca-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {
+          "name": "audience-self",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "agent-sbca",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "litellm-gateway",
+      "description": "LiteLLM AI Gateway — audience for agent-issued tokens",
+      "enabled": true,
+      "bearerOnly": true,
+      "publicClient": false,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-agent-incident-intake",
+      "enabled": true,
+      "serviceAccountClientId": "agent-incident-intake",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-sbca",
+      "enabled": true,
+      "serviceAccountClientId": "agent-sbca",
+      "realmRoles": ["agent"]
+    }
+  ]
+}

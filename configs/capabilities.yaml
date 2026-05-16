@@ -1,0 +1,25 @@
+# Seed entries for the Capability Registry (collocated with SBCA in Phase 1).
+# Agents also self-register on startup, but having a seed file means the
+# registry has a sensible default state before any agent has booted.
+
+capabilities:
+  - name: incident_intake
+    url: http://incident-intake-agent:8444
+    version: 0.1.0
+    skills:
+      - submit_incident
+      - check_duplicate
+
+  - name: semantic.query_rule
+    url: http://sbca:8444
+    version: 0.1.0
+    skills:
+      - query_rule
+
+  - name: capability_registry.register
+    url: http://sbca:8444
+    version: 0.1.0
+    skills:
+      - register
+      - deregister
+      - lookup

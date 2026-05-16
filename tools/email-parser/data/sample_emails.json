@@ -1,0 +1,22 @@
+[
+  {
+    "case": "vpn_outage",
+    "raw": "From: priya.rao@example.com\nTo: helpdesk@example.com\nSubject: URGENT: VPN keeps disconnecting every 2 minutes\nDate: Tue, 12 May 2026 09:14:32 +0000\nMessage-ID: <ce9a7-incident-1@example.com>\n\nHi team,\n\nI've been completely unable to work this morning. The corporate VPN drops every couple of minutes and I have to reconnect. This started around 8:50 AM. I'm on Windows 11, using the Cisco AnyConnect client v4.10. My department is sales. I have a client demo at 11 AM and need this fixed urgently.\n\nThanks,\nPriya Rao\nSales — EMEA\n"
+  },
+  {
+    "case": "sso_login_failure",
+    "raw": "From: marcus.lin@example.com\nTo: helpdesk@example.com\nSubject: Can't sign in to Salesforce — SSO error\nDate: Tue, 12 May 2026 10:02:11 +0000\nMessage-ID: <ce9a7-incident-2@example.com>\n\nHello,\n\nWhen I try to log in to Salesforce via SSO I get an error page that says \"AADSTS50105: The signed in user is not assigned to a role for the application\". I was working fine yesterday. Several colleagues on my team are seeing the same thing this morning.\n\nMarcus Lin\nFinance\n"
+  },
+  {
+    "case": "printer_jam_vague",
+    "raw": "From: dorothy.kim@example.com\nTo: helpdesk@example.com\nSubject: printer\nDate: Tue, 12 May 2026 11:30:00 +0000\nMessage-ID: <ce9a7-incident-3@example.com>\n\nit doesn't work\n"
+  },
+  {
+    "case": "near_duplicate_vpn",
+    "raw": "From: harish.shah@example.com\nTo: helpdesk@example.com\nSubject: VPN disconnects every minute or two\nDate: Tue, 12 May 2026 09:32:08 +0000\nMessage-ID: <ce9a7-incident-4@example.com>\n\nHi,\n\nThe corporate VPN is dropping every minute or two. Started this morning. Using AnyConnect. Need urgent help, client call at noon.\n\nHarish\nSales — APAC\n"
+  },
+  {
+    "case": "vip_outage",
+    "raw": "From: ceo@example.com\nTo: helpdesk@example.com\nSubject: My laptop won't power on\nDate: Tue, 12 May 2026 07:45:12 +0000\nMessage-ID: <ce9a7-incident-5@example.com>\n\nMy MacBook is completely unresponsive. I have a board meeting in 90 minutes and need this resolved immediately.\n\nSent from my phone\n"
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "case": "wifi_office",
+    "event": {
+      "type": "message",
+      "user": "U0123ABCDEF",
+      "text": "Hey — the office wifi keeps dropping in conference room 3, anyone else? About to start a customer call.",
+      "ts": "1747043512.000200",
+      "channel": "C04HELPDESK",
+      "team": "T0123",
+      "client_msg_id": "msg-001",
+      "files": []
+    }
+  },
+  {
+    "case": "github_403",
+    "event": {
+      "type": "message",
+      "user": "U0456GHIJKL",
+      "text": "Getting 403s from the internal GitHub Enterprise host since ~9:15 GMT. Other repos work fine, only the platform-team org is broken. Anyone?",
+      "ts": "1747045118.000300",
+      "channel": "C04HELPDESK",
+      "team": "T0123",
+      "thread_ts": null,
+      "files": [
+        {"name": "screenshot.png", "url_private": "https://files.slack.com/..."}
+      ]
+    }
+  },
+  {
+    "case": "casual_chat_not_incident",
+    "event": {
+      "type": "message",
+      "user": "U0789MNOPQR",
+      "text": "Anyone tried the new espresso machine on floor 4? 10/10 highly recommend",
+      "ts": "1747046880.000400",
+      "channel": "C04WATERCOOLER",
+      "files": []
+    }
+  }
+]

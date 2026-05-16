@@ -55,7 +55,10 @@ python scripts/seed_qdrant.py
 
 # 5. Submit a synthetic incident — choose either flow:
 scripts/demo_submit_incident.sh   # straight to Incident Intake (agent #1 only)
-scripts/demo_triage.sh            # via the Triage Orchestrator → chains Intake + Classification
+scripts/demo_triage.sh            # via the Triage Orchestrator → chains all 4 tactical agents
+
+# 6. Verify the whole stack with a single PASS/FAIL run:
+scripts/smoketest.sh              # compose health + Keycloak + end-to-end triage
 ```
 
 The triage demo is the proof of the composition story: the orchestrator never sees a peer URL — it asks the Capability Registry for whichever agent is registered under each capability name. Adding more agents to the chain in Stage 3b will be a one-line `chain:` edit in `services/triage-workflow-orchestrator/configs/agent.yaml`.

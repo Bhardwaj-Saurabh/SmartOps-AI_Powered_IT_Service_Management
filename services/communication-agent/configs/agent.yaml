@@ -1,0 +1,69 @@
+name: communication-agent
+version: 0.1.0
+pattern: chain                       # Anthropic prompt chaining
+pattern_kind: workflow
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.2
+  max_tokens: 512
+
+oidc:
+  client_id: agent-communication
+  audience: agent-communication
+
+a2a:
+  port: 8444
+  skills:
+    - id: send_status_update
+      name: Send status update
+      description: Generate + send audience-tailored incident updates across the configured channels
+
+# PRD: Communication is one of the four agents the project exposes via MCP
+# for standalone use (managers crafting ad-hoc incident comms via Claude
+# Desktop). MCP tools: draft_communication, send_update.
+mcp:
+  enabled: true
+  port: 8443
+  tools:
+    - draft_communication
+    - send_update
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  email_sender:  {url: "${EMAIL_SENDER_URL:-http://email-sender:9001}",   timeout_seconds: 5}
+  slack_poster:  {url: "${SLACK_POSTER_URL:-http://slack-poster:9002}",   timeout_seconds: 5}
+  sms_gateway:   {url: "${SMS_GATEWAY_URL:-http://sms-gateway:9003}",     timeout_seconds: 5}
+
+prompts:
+  compose_system_path: /app/configs/prompts/communication/compose.system.txt
+  compose_user_path:   /app/configs/prompts/communication/compose.user.txt
+
+semantic_queries:
+  communication_templates:  "communication_templates"
+  notification_frequency:   "notification_frequency"
+  escalation_audiences:     "escalation_audiences"
+
+audit:
+  cat_fields: [llm_prompt, llm_response, recipient_list, message_body, decision_chain]
+  pst_fields: [duration_ms, audience_count, channels_used, deliveries_attempted, deliveries_failed]
+
+kpis:
+  business:
+    - updates_sent_count
+    - audiences_reached_count
+    - executive_notification_count
+    - delivery_failure_count
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - sidecar_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

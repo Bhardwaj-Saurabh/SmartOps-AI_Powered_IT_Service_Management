@@ -472,6 +472,74 @@
       ]
     },
     {
+      "clientId": "agent-communication",
+      "description": "Communication Agent service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-communication-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {"name": "audience-self", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-communication", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-litellm", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "litellm-gateway", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-sbca", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-sbca", "id.token.claim": "false", "access.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "agent-sla-monitor",
+      "description": "SLA Monitor Agent service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-sla-monitor-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {"name": "audience-self", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-sla-monitor", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-litellm", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "litellm-gateway", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-sbca", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-sbca", "id.token.claim": "false", "access.token.claim": "true"}}
+      ]
+    },
+    {
+      "clientId": "agent-closure-orchestrator",
+      "description": "Closure Workflow Orchestrator (third service-layer agent) service account",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-closure-orchestrator-secret-rotate-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "attributes": {"access.token.lifespan": "1800"},
+      "defaultClientScopes": ["roles"],
+      "protocolMappers": [
+        {"name": "audience-self", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-closure-orchestrator", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-sbca", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-sbca", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-communication", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-communication", "id.token.claim": "false", "access.token.claim": "true"}},
+        {"name": "audience-sla-monitor", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+         "config": {"included.client.audience": "agent-sla-monitor", "id.token.claim": "false", "access.token.claim": "true"}}
+      ]
+    },
+    {
       "clientId": "agent-sbca",
       "description": "Strategic Business Context Agent service account",
       "enabled": true,
@@ -571,6 +639,24 @@
       "username": "service-account-agent-verification",
       "enabled": true,
       "serviceAccountClientId": "agent-verification",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-communication",
+      "enabled": true,
+      "serviceAccountClientId": "agent-communication",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-sla-monitor",
+      "enabled": true,
+      "serviceAccountClientId": "agent-sla-monitor",
+      "realmRoles": ["agent"]
+    },
+    {
+      "username": "service-account-agent-closure-orchestrator",
+      "enabled": true,
+      "serviceAccountClientId": "agent-closure-orchestrator",
       "realmRoles": ["agent"]
     }
   ]

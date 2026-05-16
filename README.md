@@ -60,6 +60,16 @@ End-to-end reference implementation of the **DI AI Framework** built around an I
   - EU AI Act doc **reclassified high-risk** — the orchestrator inherits Automated Fix's regulatory weight because it's the authorising boundary
 - `scripts/demo_full_i2r.sh` — chains Triage → Resolution end-to-end through both orchestrators.
 
+**Stage 5a — Closure begins: Communication + SLA Monitor + third service-layer orchestrator**:
+- `services/communication-agent/` — tactical agent #9. Anthropic prompt chaining; one LLM call per (audience, channel) cell. MCP enabled per PRD (`draft_communication`, `send_update`).
+- `services/sla-monitor-agent/` — tactical agent #10. Deterministic math + one optional LLM narrative call. SBCA-driven targets (priority × tier), business-hours-aware elapsed via `clock-timer-service`, pause-state deduction via `sla-rules-engine`.
+- `services/closure-workflow-orchestrator/` — **third service-layer agent**. Chains Communication + SLA. Adds richer reference syntax: `input.priority.service_tier` dot-walks into nested input fields, `<idx>.<artifact>.<field>` dot-walks into prior artifacts.
+- `tools/email-sender/` + `tools/slack-poster/` + `tools/sms-gateway/` — Communication sidecars (synthetic dispatchers with `/sent` + `/posted` inspection endpoints).
+- `tools/clock-timer-service/` + `tools/sla-rules-engine/` — SLA sidecars (business-hours-aware time math + pause-state computation).
+- `configs/semantic-plane/communication-rules.yaml` — audience/channel/tone/length matrix by priority; escalation_audiences.
+- `configs/semantic-plane/sla-rules.yaml` — per-(priority, tier) response/resolve targets; per-region business hours; pause conditions; breach-warning percentages.
+- `scripts/demo_closure.sh` — submits a resolved-incident payload; outputs the dispatch + SLA snapshot artifacts.
+
 ## Quickstart
 
 ```bash
@@ -82,6 +92,7 @@ scripts/demo_submit_incident.sh   # straight to Incident Intake (agent #1 only)
 scripts/demo_triage.sh            # via the Triage Orchestrator → chains all 4 tactical agents
 scripts/demo_resolve.sh           # Stage 4a — Resolution Orchestrator (Diagnostic + Knowledge)
 scripts/demo_full_i2r.sh          # Stage 4b — full I2R: Triage → Resolution (8 tactical agents)
+scripts/demo_closure.sh           # Stage 5a — Closure Orchestrator (Communication + SLA Monitor)
 
 # 6. Verify the whole stack with a single PASS/FAIL run:
 scripts/smoketest.sh              # compose health + Keycloak + end-to-end triage

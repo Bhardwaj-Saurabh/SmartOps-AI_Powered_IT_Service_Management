@@ -1,0 +1,16 @@
+SLA snapshot:
+  priority: {priority}
+  customer_tier: {customer_tier}
+  response_target_minutes:   {response_target}
+  resolve_target_minutes:    {resolve_target}
+  response_consumed_minutes: {response_consumed}
+  resolve_consumed_minutes:  {resolve_consumed}
+  response_consumed_pct:     {response_pct}
+  resolve_consumed_pct:      {resolve_pct}
+  response_breached:         {response_breached}
+  resolve_breached:          {resolve_breached}
+  response_warning:          {response_warning}
+  resolve_warning:           {resolve_warning}
+  paused_state:              {paused_state}
+
+Write the narrative.

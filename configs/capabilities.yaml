@@ -65,6 +65,24 @@ capabilities:
     skills:
       - resolve_incident
 
+  - name: send_status_update
+    url: http://communication-agent:8444
+    version: 0.1.0
+    skills:
+      - send_status_update
+
+  - name: calculate_sla_status
+    url: http://sla-monitor-agent:8444
+    version: 0.1.0
+    skills:
+      - calculate_sla_status
+
+  - name: close_incident
+    url: http://closure-workflow-orchestrator:8444
+    version: 0.1.0
+    skills:
+      - close_incident
+
   - name: semantic.query_rule
     url: http://sbca:8444
     version: 0.1.0

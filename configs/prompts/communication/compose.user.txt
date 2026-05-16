@@ -1,0 +1,16 @@
+Incident snapshot:
+  id: {incident_id}
+  affected_service: {affected_service}
+  priority: {priority}
+  current_state: {current_state}
+  summary: {symptoms_summary}
+  diagnosed_root_cause: {root_cause}
+  fix_status: {fix_status}
+  verification: {verification_status}
+
+Audience: {audience}
+Tone: {tone}
+Length: {length}
+Channel: {channel}
+
+Compose the update.

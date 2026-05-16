@@ -1,0 +1,67 @@
+name: sla-monitor-agent
+version: 0.1.0
+pattern: chain                       # Deterministic chain; one optional LLM call for the narrative
+pattern_kind: workflow
+
+model:
+  alias: incident-intake-chat
+  temperature: 0.0
+  max_tokens: 256
+
+oidc:
+  client_id: agent-sla-monitor
+  audience: agent-sla-monitor
+
+a2a:
+  port: 8444
+  skills:
+    - id: calculate_sla_status
+      name: Calculate SLA status
+      description: Compute response/resolve consumption + breach/warning for an incident; emit a narrative
+
+mcp:
+  enabled: false                     # always orchestrated per PRD
+
+capability_registry:
+  register_on_startup: true
+  deregister_on_shutdown: true
+
+tools:
+  clock_timer:     {url: "${CLOCK_TIMER_URL:-http://clock-timer-service:9001}",   timeout_seconds: 5}
+  sla_rules:       {url: "${SLA_RULES_ENGINE_URL:-http://sla-rules-engine:9002}", timeout_seconds: 5}
+
+prompts:
+  narrative_system_path: /app/configs/prompts/sla/narrative.system.txt
+  narrative_user_path:   /app/configs/prompts/sla/narrative.user.txt
+
+semantic_queries:
+  sla_targets:             "sla_targets"
+  business_hours:          "business_hours"
+  sla_business_hours_only: "sla_business_hours_only"
+  sla_pause_conditions:    "sla_pause_conditions"
+  sla_breach_warning_pct:  "sla_breach_warning_pct"
+
+# When false, skip the narrative LLM call. Useful for high-frequency monitor
+# pings where the orchestrator just wants the numbers.
+narrative:
+  enabled: true
+
+audit:
+  cat_fields: [llm_prompt, llm_response, sla_targets_applied, business_hours_applied, pause_segments]
+  pst_fields: [duration_ms, response_consumed_pct, resolve_consumed_pct, breached, warning]
+
+kpis:
+  business:
+    - sla_breaches_count
+    - sla_warnings_count
+    - per_priority_avg_response_consumed_pct
+  technical:
+    - a2a_latency_ms
+    - tokens_used
+    - sidecar_latency_ms
+    - error_rate
+
+resilience:
+  tool_retry:   {attempts: 3, backoff: exponential}
+  llm_retry:    {attempts: 3, backoff: exponential}
+  sbca_failure: hard_fail

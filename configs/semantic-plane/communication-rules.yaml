@@ -1,0 +1,37 @@
+# Business rules for the Communication Agent.
+
+# Rule: communication_templates
+# Which channels each audience receives at each priority. Missing combos →
+# audience does not get a notification at this priority.
+communication_templates:
+  P1:
+    end_user:               {channels: [email, slack],       tone: empathetic, length: short}
+    affected_stakeholders:  {channels: [email, slack, sms],  tone: factual,    length: medium}
+    executive:              {channels: [email, sms],         tone: brief,      length: short}
+    resolver_team:          {channels: [slack],              tone: technical,  length: long}
+  P2:
+    end_user:               {channels: [email],              tone: empathetic, length: short}
+    affected_stakeholders:  {channels: [email, slack],       tone: factual,    length: medium}
+    resolver_team:          {channels: [slack],              tone: technical,  length: medium}
+  P3:
+    end_user:               {channels: [email],              tone: empathetic, length: short}
+    resolver_team:          {channels: [slack],              tone: technical,  length: medium}
+  P4:
+    end_user:               {channels: [email],              tone: empathetic, length: short}
+
+# Rule: notification_frequency
+# Minimum minutes between consecutive proactive updates per priority. Phase 1
+# the agent doesn't schedule; the orchestrator decides when to call.
+notification_frequency:
+  P1: 30
+  P2: 120
+  P3: 480
+  P4: 1440
+
+# Rule: escalation_audiences
+# Which audiences are pulled in when an incident is flagged escalated.
+escalation_audiences:
+  P1: [end_user, affected_stakeholders, executive, resolver_team]
+  P2: [end_user, affected_stakeholders, resolver_team]
+  P3: [end_user, resolver_team]
+  P4: [end_user]

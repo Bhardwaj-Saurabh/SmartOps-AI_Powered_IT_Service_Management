@@ -1,0 +1,42 @@
+# Business rules for the SLA Monitor Agent.
+
+# Rule: sla_targets
+# Response = time-to-first-update; Resolution = time-to-completion. Minutes.
+# Keyed by (priority, customer_tier). category overrides allowed under
+# ``overrides_by_category`` (none in the seed; structure documented).
+sla_targets:
+  by_priority:
+    P1: {gold: {response: 15, resolve: 60},   silver: {response: 30, resolve: 120},  bronze: {response: 60, resolve: 240}}
+    P2: {gold: {response: 60, resolve: 240},  silver: {response: 120, resolve: 480}, bronze: {response: 240, resolve: 1440}}
+    P3: {gold: {response: 240, resolve: 1440}, silver: {response: 480, resolve: 2880}, bronze: {response: 1440, resolve: 4320}}
+    P4: {gold: {response: 480, resolve: 4320}, silver: {response: 1440, resolve: 7200}, bronze: {response: 4320, resolve: 10080}}
+  overrides_by_category: {}     # e.g. security/* shorter; left empty for now
+
+# Rule: business_hours
+# Per region. The clock-timer-service uses these to subtract out-of-hours from
+# elapsed time when ``sla_business_hours_only=true`` for that priority.
+business_hours:
+  UK: {timezone: "Europe/London", weekdays: [1,2,3,4,5], start: "08:00", end: "18:00"}
+  US: {timezone: "America/New_York", weekdays: [1,2,3,4,5], start: "08:00", end: "18:00"}
+  APAC: {timezone: "Asia/Singapore", weekdays: [1,2,3,4,5], start: "09:00", end: "18:00"}
+
+# Whether each priority is business-hours-only. P1 always counts 24/7.
+sla_business_hours_only:
+  P1: false
+  P2: false
+  P3: true
+  P4: true
+
+# Rule: sla_pause_conditions
+# Incident states that pause the SLA clock.
+sla_pause_conditions:
+  states: [needs_clarification, input-required, awaiting_customer_response]
+
+# Rule: sla_breach_warning_pct
+# At what percentage of the SLA budget the agent should emit a "approaching
+# breach" warning. Distinct from breach (= 100%).
+sla_breach_warning_pct:
+  default: 80
+  by_priority:
+    P1: 60
+    P2: 75
